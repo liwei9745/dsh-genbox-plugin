@@ -6,6 +6,8 @@ export interface GenBoxClientOptions {
   baseUrl: string
   adminKey?: string
   requestTimeoutMs?: number
+  /** How long to wait between "GenBox is busy" attempts (default 3000 ms). */
+  busyRetryDelayMs?: number
 }
 
 /** A GenBox HTTP failure (non-2xx response or a broken payload). */
@@ -82,11 +84,13 @@ export class GenBoxClient {
   readonly baseUrl: string
   private readonly adminKey: string | undefined
   private readonly requestTimeoutMs: number
+  private readonly busyRetryDelayMs: number
 
   constructor(options: GenBoxClientOptions) {
     this.baseUrl = options.baseUrl.replace(/\/+$/, '')
     this.adminKey = options.adminKey && options.adminKey.trim() !== '' ? options.adminKey : undefined
     this.requestTimeoutMs = options.requestTimeoutMs ?? 120000
+    this.busyRetryDelayMs = options.busyRetryDelayMs ?? 3000
   }
 
   private headers(json: boolean): Headers {
@@ -107,29 +111,46 @@ export class GenBoxClient {
     body?: unknown,
     signal?: AbortSignal | undefined,
     timeoutMs?: number | undefined,
+    /** Wait out this many "GenBox is busy" answers (HTTP 429) before giving up. */
+    busyRetries = 0,
   ): Promise<T> {
-    const init: RequestInit = {
-      method,
-      headers: this.headers(body !== undefined),
-      signal: this.signal(signal, timeoutMs),
-    }
-    if (body !== undefined) init.body = JSON.stringify(body)
-    let response: Response
-    try {
-      response = await fetch(this.baseUrl + path, init)
-    } catch (error) {
-      // A cancellation or a timeout is about this call, not about reachability.
-      if (error instanceof Error && (error.name === 'AbortError' || error.name === 'TimeoutError')) throw error
-      throw transportError(this.baseUrl, path, error)
-    }
-    const text = await response.text()
-    if (!response.ok) {
+    for (let attempt = 0; ; attempt += 1) {
+      const init: RequestInit = {
+        method,
+        headers: this.headers(body !== undefined),
+        signal: this.signal(signal, timeoutMs),
+      }
+      if (body !== undefined) init.body = JSON.stringify(body)
+      let response: Response
+      try {
+        response = await fetch(this.baseUrl + path, init)
+      } catch (error) {
+        // A cancellation or a timeout is about this call, not about reachability.
+        if (error instanceof Error && (error.name === 'AbortError' || error.name === 'TimeoutError')) throw error
+        throw transportError(this.baseUrl, path, error)
+      }
+      const text = await response.text()
+      if (response.ok) return (text ? JSON.parse(text) : null) as T
+
+      // GenBox answers 429 while another generation of its own is in flight. The
+      // request was refused, so waiting and asking again cannot duplicate work -
+      // and a submit that just fails makes the caller redo the whole thing.
+      //
+      // Only 429: GenBox reports permanent "this feature is not installed" states
+      // (the missing cutout checkpoint) as 503, and waiting on those just delays a
+      // message the caller needs now.
+      const busy = response.status === 429
+      if (busy && attempt < busyRetries) {
+        console.warn('[genbox] GenBox is busy (HTTP ' + response.status + '), retrying ' + path + ' in ' + this.busyRetryDelayMs + 'ms')
+        await this.sleep(this.busyRetryDelayMs, signal)
+        continue
+      }
       throw new GenBoxError(
-        'GenBox ' + method + ' ' + path + ' failed (HTTP ' + response.status + '): ' + describeFailure(text),
+        'GenBox ' + method + ' ' + path + ' failed (HTTP ' + response.status + '): ' + describeFailure(text)
+        + (busy ? ' (GenBox was busy for ' + (attempt + 1) + ' attempt(s); another generation may still be running)' : ''),
         response.status,
       )
     }
-    return (text ? JSON.parse(text) : null) as T
   }
 
   /** GET /api/status - liveness and configured-provider summary. */

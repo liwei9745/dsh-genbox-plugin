@@ -146,6 +146,7 @@ export function registerVideoTools(ctx: Context, client: GenBoxClient, config: C
         body,
         exec.signal,
         360000,
+        3,
       )
       const taskId = created.task_id ?? created.id
       if (taskId === undefined) {

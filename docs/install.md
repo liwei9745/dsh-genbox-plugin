@@ -115,12 +115,15 @@ GenBox 里没有已启用且配了 Key 的对应 provider。用 `genbox_provider
 
 ### 4) `inpaint_provider_unsupported`
 
-GenBox 要求 provider 声明 `capabilities.inpaint_mask = true`。这是 GenBox 的授权门槛，不是插件问题。
+GenBox 的局部重绘要求 provider **同时**满足两点：声明 `capabilities.inpaint_mask = true`，
+且 `endpoint_type = openai`。只满足一条也会被拒——实测 `gpt-image` 声明了 mask，但 `endpoint_type=auto`，
+一样报这个错。被拒时插件会直接列出**当前满足全部条件**的 provider；`genbox_providers` 也能看到每个 provider 的 `endpointType`。
 
 ### 5) `precision_edit_provider_unsupported`
 
-“精准改图”要求被显式验证过的改图模型与匹配传输。用真实 GPT-image / Gemini 端点才可能通过；
-mock provider 无法伪造。
+GenBox 要求该 provider 的 `capabilities.precision_edit = true`（模型需是它认可的改图模型）。
+这**不是**必须真实 Key：仓库自带的 mock provider 就声明了该能力，可以直接跑通这条链路；
+真实 provider 则需要在 GenBox 里完成它的验证流程。被拒时插件会列出当前真正可用的 provider。
 
 ### 6) `cutout_model_missing`
 

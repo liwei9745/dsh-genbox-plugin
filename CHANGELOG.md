@@ -9,6 +9,14 @@
   所以「下载到的视频」从未被真正解码验证过——之前的断言只查了「文件非空」。现在 mock 在启动时用 ffmpeg 生成
   真实的 2 秒片段（ffmpeg 不可用时回退到占位数据并写明原因）。这条是旅程测试抓出来的。
 - 修正 `genbox_video_edit` 的工具描述：原来只列了 11 种操作里的 6 种（对照自动生成的 `docs/tools.md` 发现）。
+- **GenBox 忙时不再直接失败**：真实跑出来的服务端行为——另一张生成还在进行时，GenBox 会对新的提交回
+  `HTTP 429`。提交类调用（生图 / 生视频 / 超分 / 变体 / 抠图）现在会**等待并重试**（默认 3 次、每次 3 秒，
+  可通过 `busyRetryDelayMs` 调整）；仍然失败时说明忙了多久、试了几次。提交被拒不会产生重复生成。
+- `verify-media.mjs` 从「只打印」升级为 7 项断言（图库分页、downloadTo 真的落盘、复制不越界、提示词助手）；
+  顺带修掉它在 Windows 上用 `process.exit()` 退出时的崩溃（改用 `process.exitCode`）。
+- 排错文档修正两条不准确的说法：inpaint 需要 `inpaint_mask` **且** `endpoint_type=openai`；
+  `precision_edit` 并非必须真实 Key（自带 mock provider 就能跑通）。
+- `verify-http-robustness.mjs` 增至 17 项断言（新增忙碌重试与预算校验）。
 - **inpaint 的提示考虑传输方式**：用真实 provider 试出来的规则——GenBox 要求 inpaint 的 provider 同时满足
   `capabilities.inpaint_mask=true` **和** `endpoint_type=openai`（本例 `gpt-image` 是 `auto`，
   即使声明了 mask 也会被拒）。现在拒绝信息只列**真正可用**的 provider，不再误导。

@@ -115,7 +115,8 @@ async function runGeneration(
   signal: AbortSignal | undefined,
   background: boolean,
 ): Promise<ImageBatch> {
-  const created = await client.json<{ generation_id?: string }>('POST', '/api/generate', body, signal)
+  // 3 extra attempts: GenBox answers 429 while one of its own generations is in flight.
+  const created = await client.json<{ generation_id?: string }>('POST', '/api/generate', body, signal, undefined, 3)
   const generationId = created.generation_id
   if (generationId === undefined) {
     throw new Error('GenBox did not return a generation_id: ' + JSON.stringify(created))

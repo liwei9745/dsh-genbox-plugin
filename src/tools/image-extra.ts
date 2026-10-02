@@ -73,7 +73,7 @@ export function registerImageToolbox(ctx: Context, client: GenBoxClient, config:
         original_width?: number
         original_height?: number
         message?: string
-      }>('POST', '/api/images/upscale', body, exec.signal)
+      }>('POST', '/api/images/upscale', body, exec.signal, undefined, 2)
       if (response.b64_json === undefined || response.success === false) {
         throw new Error('GenBox upscale failed: ' + (response.message ?? 'no image data returned'))
       }
@@ -123,7 +123,7 @@ export function registerImageToolbox(ctx: Context, client: GenBoxClient, config:
         images?: Array<{ b64_json?: string; local_path?: string | null }>
         provider_id?: string
         model?: string
-      }>('POST', '/api/images/variations', body, exec.signal)
+      }>('POST', '/api/images/variations', body, exec.signal, undefined, 2)
       const directory = resolveOutputDir(config.outputDir, args.outputDir)
       const files: string[] = []
       let index = 0
@@ -178,7 +178,7 @@ export function registerImageToolbox(ctx: Context, client: GenBoxClient, config:
         height?: number
         adapter?: string
         gallery_url?: string
-      }>('POST', '/api/image-tools/cutout', body, exec.signal)
+      }>('POST', '/api/image-tools/cutout', body, exec.signal, undefined, 2)
       if (typeof response.image_data !== 'string' || response.image_data === '') {
         throw new Error('GenBox cutout returned no image: ' + JSON.stringify(response).slice(0, 300))
       }

@@ -122,11 +122,15 @@ No enabled provider with an API key. Run `genbox_providers` (or `genbox_doctor`)
 
 ### 4) `inpaint_provider_unsupported`
 
-GenBox requires the provider to declare `capabilities.inpaint_mask = true`. That is GenBox policy, not a plugin bug.
+GenBox requires **both** `capabilities.inpaint_mask = true` **and** `endpoint_type = openai`.
+Satisfying only one is refused: a measured case is `gpt-image`, which declares the mask but runs on the `auto` transport.
+When it refuses, the tool lists the enabled providers that meet every condition, and `genbox_providers` exposes each provider's `endpointType`.
 
 ### 5) `precision_edit_provider_unsupported`
 
-Precision editing needs a model whose capability you confirmed explicitly. See [precision-edit.md](./precision-edit.md).
+GenBox requires `capabilities.precision_edit = true` for the chosen provider (and a model it recognises for edits).
+This is **not** "a real key is required": the bundled mock provider declares the capability, so the whole path can be exercised without one.
+See [precision-edit.md](./precision-edit.md).
 
 ### 6) `cutout_model_missing`
 

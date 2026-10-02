@@ -45,6 +45,22 @@ const server = createServer((request, response) => {
     response.end(JSON.stringify({ detail: 'still broken' }))
     return
   }
+  if (path === '/busy') {
+    // GenBox's own concurrency guard: refuse twice, then accept.
+    if (count <= 2) {
+      response.writeHead(429, JSON_HEADERS)
+      response.end(JSON.stringify({ detail: 'another generation is still running' }))
+      return
+    }
+    response.writeHead(200, JSON_HEADERS)
+    response.end(JSON.stringify({ ok: true }))
+    return
+  }
+  if (path === '/always-busy' || path === '/no-retry') {
+    response.writeHead(429, JSON_HEADERS)
+    response.end(JSON.stringify({ detail: 'another generation is still running' }))
+    return
+  }
   if (path === '/no-such-task') {
     response.writeHead(404, JSON_HEADERS)
     response.end(JSON.stringify({ detail: 'task not found' }))
@@ -61,7 +77,7 @@ const server = createServer((request, response) => {
 
 await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
 const port = server.address().port
-const client = new GenBoxClient({ baseUrl: 'http://127.0.0.1:' + port, requestTimeoutMs: 5000 })
+const client = new GenBoxClient({ baseUrl: 'http://127.0.0.1:' + port, requestTimeoutMs: 5000, busyRetryDelayMs: 20 })
 
 const checks = []
 const check = (label, ok) => checks.push([label, ok])
@@ -134,6 +150,16 @@ const downloadError = await client.download('/api/video/file/missing.mp4', targe
 check('a failed download names the URL and the reason', downloadError instanceof GenBoxError
   && downloadError.message.includes('missing.mp4') && downloadError.message.includes('clip expired'))
 check('a failed download writes nothing', !existsSync(target))
+
+// 6. "GenBox is busy": a refused submit is worth waiting out, a permanent one is not.
+const busy = await client.json('POST', '/busy', { probe: true }, undefined, undefined, 2)
+check('a busy submit is retried until it is accepted', busy?.ok === true && hits.get('/busy') === 3)
+const stillBusy = await client.json('POST', '/always-busy', { probe: true }, undefined, undefined, 1).then(() => undefined, (error) => error)
+check('a permanently busy submit gives up with the HTTP reason', stillBusy instanceof GenBoxError && stillBusy.status === 429)
+check('the busy refusal explains the attempt count', typeof stillBusy?.message === 'string' && /busy/i.test(stillBusy.message))
+check('the retry budget is honoured exactly', hits.get('/always-busy') === 2)
+const noRetry = await client.json('POST', '/no-retry', { probe: true }).then(() => undefined, (error) => error)
+check('without a budget there is a single attempt', noRetry instanceof GenBoxError && hits.get('/no-retry') === 1)
 
 server.close()
 
