@@ -52,10 +52,21 @@ registry.start({
 
 ## 验证到哪一步（诚实说明）
 
-| 项 | 状态 |
-|---|---|
-| 调用形状、返回值、注册次数、job 自行结算并落盘、关闭时完全不碰 registry | ✅ 用**桩 registry** 单元验证：`node scripts/verify-native-jobs.mjs` |
-| 真实模型会话里由 `dsh-tool-jobs` 投递完成通知、`job_kill` 生效 | ⚠️ **未经端到端验证**——本机 CLI profile 没有可用的模型凭据，跑不了真实会话 |
+`node scripts/verify-native-jobs.mjs` 现在跑三层，10 项断言全过：
+
+| 层次 | 验的是什么 | 结果 |
+|---|---|---|
+| 1. 桩 registry | 我们发出的调用形状：kind / label / owner / `run()` 返回 `{done,cancel}`、返回值带 jobId | ✅ |
+| 2. **真实的 `dsh-jobs-local` 注册表**（从已安装的 DSH 应用里在进程内组合），且**没有挂 job 控制器** | 注册表会拒绝（`no job controller serves this agent`），**插件必须降级而不是让调用失败** | ✅ 已修并验证 |
+| 3. 真实注册表 + 挂上控制器 | 拿到真实 job id（`genbox-video-1`）、kind 正确、job 结算为 `completed`、**新视频真的落盘** | ✅ |
+
+第 2 层是这一轮抓出来的**真实缺陷**：注册表要求"有 job 控制器服务这个 agent"（提示信息明说
+要加载 `@deepseek-ai/dsh-tool-jobs`），而插件原来直接把异常抛了出去——那样打开 `nativeJobs`
+反而会让 `genbox_video_generate({background:true})` 整个失败。现在注册表拒绝时会**回退到普通的
+GenBox 任务句柄**，并用 `console.warn` 说明原因，任务永远不会因为这件事丢掉。
+
+**仍未验证**：模型驱动的真实会话里 `dsh-tool-jobs` 投递完成通知、`job_kill` 生效这条链路
+（本机 CLI profile 没有可用的模型凭据，跑不了真实会话）。
 
 因为默认是 `false`，**发布出去的行为仍然是那条已经被完整验证过的路径**；
 想尝鲜的人可以打开这个开关，出问题随时关掉。

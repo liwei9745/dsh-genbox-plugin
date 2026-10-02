@@ -185,20 +185,29 @@ export function registerVideoTools(ctx: Context, client: GenBoxClient, config: C
           // Hand the waiting to the DSH job registry so it outlives this tool call.
           // The job deliberately ignores exec.signal: the call is over already.
           const owner = (exec as unknown as { agent?: { id?: string } }).agent?.id
-          const jobId = registry.start({
-            kind: 'genbox-video',
-            label: args.prompt.slice(0, 80),
-            ...(owner !== undefined ? { owner } : {}),
-            run: () => ({
-              done: settle(undefined),
-              cancel: () => {
-                void client
-                  .json('POST', '/api/video/cancel/' + encodeURIComponent(taskId), undefined, exec.signal)
-                  .catch(() => undefined)
-              },
-            }),
-          })
-          return { background: true, taskId, jobId, status: 'queued', elapsedSeconds: 0 }
+          try {
+            const jobId = registry.start({
+              kind: 'genbox-video',
+              label: args.prompt.slice(0, 80),
+              ...(owner !== undefined ? { owner } : {}),
+              run: () => ({
+                done: settle(undefined),
+                cancel: () => {
+                  void client
+                    .json('POST', '/api/video/cancel/' + encodeURIComponent(taskId), undefined, exec.signal)
+                    .catch(() => undefined)
+                },
+              }),
+            })
+            return { background: true, taskId, jobId, status: 'queued', elapsedSeconds: 0 }
+          } catch (error) {
+            // The registry refuses when no job controller serves this owner:
+            //   "background jobs unavailable: no job controller serves this agent
+            //    (load @deepseek-ai/dsh-tool-jobs in its composition)".
+            // That must never lose the task - GenBox is already working on it - so
+            // fall back to the plain handle and let the caller poll genbox_task.
+            console.warn('[genbox] job registry refused the job, using the GenBox task handle instead: ' + (error as Error).message)
+          }
         }
         return { background: true, taskId, status: 'queued', elapsedSeconds: 0 }
       }

@@ -80,9 +80,14 @@ for (const suite of suites) {
   }
   const started = Date.now()
   const run = spawnSync(process.execPath, [join(import.meta.dirname, suite.file)], { encoding: 'utf8' })
-  const output = (run.stdout ?? '') + (run.stderr ?? '')
-  const lines = output.trim().split('\n').filter((line) => line.trim() !== '')
-  const verdict = lines.length > 0 ? lines[lines.length - 1].slice(0, 90) : '(no output)'
+  // The verdict is the last line a suite writes to stdout: stderr can carry
+  // warnings (a fallback path, a skipped optional step) that would otherwise
+  // become the headline in the summary.
+  const lastLine = (text) => {
+    const lines = String(text ?? '').trim().split('\n').filter((line) => line.trim() !== '')
+    return lines.length > 0 ? lines[lines.length - 1].slice(0, 90) : ''
+  }
+  const verdict = lastLine(run.stdout) || lastLine(run.stderr) || '(no output)'
   results.push({ ...suite, status: run.status === 0 ? 'PASS' : 'FAIL', detail: verdict, ms: Date.now() - started })
   process.stdout.write((run.status === 0 ? '.' : 'F'))
 }

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **修复**：`nativeJobs` 打开时，如果宿主组合里没有 job 控制器（注册表会以
+  "no job controller serves this agent" 拒绝），`genbox_video_generate({background:true})` 原本会整个失败；
+  现在回退到普通的 GenBox 任务句柄，任务不会丢。
+- `scripts/verify-native-jobs.mjs` 升级为**三层验证**（桩 + 真实 `dsh-jobs-local` 注册表的拒绝路径与
+  带控制器路径），10 项断言全过；真实 job 会结算为 `completed` 并把视频落盘。
 - `genbox_doctor` 的「连不上」提示补上 GenBox 上游地址，并去掉重复的 URL 前缀。
 - 新增 `docs/releasing.md`：把两轮真实发布的操作顺序、期望输出与踩过的坑固化下来。
 
