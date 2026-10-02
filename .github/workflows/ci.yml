@@ -17,7 +17,7 @@ jobs:
       - run: pnpm install --no-frozen-lockfile
       - run: pnpm run typecheck
       - run: pnpm run build
-      # GenBox-independent checks. The runners ship ffmpeg, so the local video
-      # editor and the annotation renderer are verified on every push.
-      - run: node scripts/verify-annotate.mjs
-      - run: node scripts/verify-video-edit.mjs
+      # One runner for every suite. Suites that need a live GenBox are reported
+      # as SKIP here; the annotation renderer and the ffmpeg video editor run for
+      # real because the runners ship ffmpeg.
+      - run: node scripts/verify-all.mjs

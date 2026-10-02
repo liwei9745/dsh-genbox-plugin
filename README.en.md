@@ -105,6 +105,8 @@ corepack enable
 pnpm install
 pnpm run typecheck
 pnpm run build
+# one runner for every suite; anything missing is reported as SKIP
+node scripts/verify-all.mjs
 # GenBox-independent checks (need ffmpeg on PATH)
 node scripts/verify-annotate.mjs
 node scripts/verify-video-edit.mjs

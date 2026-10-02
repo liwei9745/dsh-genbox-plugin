@@ -13,6 +13,13 @@ pnpm run build
 
 ## 本地端到端验证（不需要任何 API Key）
 
+一条命令跑完所有套件；缺前置条件的会自动标 SKIP 而不是失败：
+
+`sh
+node scripts/verify-all.mjs
+`
+
+
 ```sh
 # 1) 起一个假 provider
 python scripts/mock-openai-image.py          # 需要 Pillow；也可以用 GenBox 的 venv python

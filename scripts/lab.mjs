@@ -162,6 +162,7 @@ async function render() {
     '<h2>4. GenBox 图库素材</h2><div class="card"><div class="grid">' + genboxCards(genbox.ok ? genbox.items : []) + '</div></div>',
     '<h2>5. 本地产物 .genbox-out（' + local.length + ' 个）</h2><div class="card"><div class="grid">' + mediaCards(local.slice(0, 60)) + '</div></div>',
     '<h2>6. 复现命令</h2><div class="card"><pre>cd E:\\AI\\GenBox-dsh',
+    'node scripts/verify-all.mjs          # 一条命令跑完所有验证',
     'node scripts/verify-tools.mjs        # 生图/改图/超分/变体/视频（需 GenBox 8892 + mock 8899）',
     'node scripts/verify-background.mjs   # 非阻塞提交 + genbox_task',
     'node scripts/verify-video-edit.mjs   # 本地 ffmpeg 剪辑（不需要 GenBox）',

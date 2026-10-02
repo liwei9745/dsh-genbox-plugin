@@ -123,6 +123,7 @@ corepack enable        # 本机若没有全局 pnpm
 pnpm install
 pnpm run typecheck
 pnpm run build         # tsdown -> lib/index.js
+node scripts/verify-all.mjs     # 一条命令跑完所有验证（缺前置的会自动 SKIP）
 node scripts/verify-tools.mjs   # 端到端（需 GenBox + mock provider 已启动）
 ```
 
