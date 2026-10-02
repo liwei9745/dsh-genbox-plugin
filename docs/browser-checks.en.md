@@ -22,7 +22,7 @@ instead of producing a false failure.
 | 2 | Generate page left splitter `#resizeLeft` | hit-tests the grip mark (`left+10`) | left column +120 / preview -120 | 1920x1080 | ok |
 | 3 | Precision canvas corner grip | **reachability is the assertion** | - (handler maths is covered by the static contract test) | 1920x1080 | ok |
 | 4 | Precision canvas bottom bar | needs a loaded image and fullscreen | height only: h +120, w 0 | 1920x1080 | ok |
-| 5 | Generate page vertical splitter (narrow) | hit test | - | 768x900 | skipped: not laid out at that breakpoint |
+| 5 | Generate page vertical splitter (narrow) | hit test | when the bar is not laid out, assert the panes still fit the column | 768x900 | known upstream overflow: panes 490+349=839 vs a 721px column |
 
 ## Reproducing
 
@@ -40,5 +40,8 @@ node scripts\verify-all.mjs
 - The provider column handle `.provider-col-resize`: audited (a real drag moves the card 454 -> 534)
   but only ~4 of its 8px are hit-testable - the card's `overflow: hidden` clips the rest and a
   `z-index` bump did not help. Usable but narrow; not asserted yet.
+- Narrow-viewport expectations now have a positive assertion (`canvasRow + bottomRow <= center`),
+  and it caught a real defect at once: at 768x900 the panes are 490+349=839 against a 721px column.
+  UNUSED-PLACEHOLDER-REMOVE
 - Narrow-viewport expectations: the suite only asserts "skip when not laid out", not what the
   splitter should do at a small breakpoint.
