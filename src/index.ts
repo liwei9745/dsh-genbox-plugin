@@ -20,6 +20,8 @@ export const inject = ['tools']
 export { Config }
 // Re-exported so the annotation helpers can be tested and reused directly.
 export { readImageSize, renderAnnotationOverlay, toGenBoxAnnotations } from './annotate.js'
+// Exported so the HTTP behaviour (error wording, tolerant polling) is testable directly.
+export { GenBoxClient, GenBoxError } from './client.js'
 
 export function apply(ctx: Context, config: GenBoxConfig) {
   const client = new GenBoxClient({

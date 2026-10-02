@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **更抗抖的轮询**：视频任务动辄几分钟，轮询期间掉一次（5xx / 429 / 408 / 网络抖动）不再让整个工具调用失败——
+  连续失败超过预算（默认 5 次）才放弃；**永久性拒绝（4xx）仍然立即失败**，取消语义不变。
+- **报错引用人话**：GenBox 的失败体有 `{"detail": "..."}`、`{"detail": {"error": code, "message": text}}`
+  等多种形状，现在引用其中的那句话（必要时附上错误码），不再把原始 JSON 整块丢给模型；下载失败也会带出原因。
+- 新增 `scripts/verify-http-robustness.mjs`（12 项断言，用本地敌意服务器驱动）：错误措辞、丢包重试、
+  永久拒绝不重试、取消语义、下载失败不落文件。
 - **修复**：`nativeJobs` 打开时，如果宿主组合里没有 job 控制器（注册表会以
   "no job controller serves this agent" 拒绝），`genbox_video_generate({background:true})` 原本会整个失败；
   现在回退到普通的 GenBox 任务句柄，任务不会丢。

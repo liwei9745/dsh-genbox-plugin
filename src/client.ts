@@ -37,6 +37,46 @@ function transportError(baseUrl: string, path: string, error: unknown): GenBoxEr
   )
 }
 
+function clip(value: string, limit: number): string {
+  return value.length > limit ? value.slice(0, limit) + '...' : value
+}
+
+/**
+ * GenBox answers failures with a FastAPI-style body whose human sentence can sit at
+ * several depths: `{"detail": "..."}`, `{"detail": {"error": code, "message": text}}`
+ * or `{"error": code, "message": text}`. Quote the sentence, not the JSON.
+ */
+function describeFailure(text: string, limit = 400): string {
+  const trimmed = text.trim()
+  if (trimmed === '') return '(empty response body)'
+  try {
+    const body = JSON.parse(trimmed) as unknown
+    const detail = (body as { detail?: unknown } | null)?.detail ?? body
+    if (typeof detail === 'string' && detail !== '') return clip(detail, limit)
+    if (detail !== null && typeof detail === 'object') {
+      const record = detail as { message?: unknown; error?: unknown; detail?: unknown; code?: unknown }
+      const message = typeof record.message === 'string' ? record.message : undefined
+      const code = typeof record.error === 'string'
+        ? record.error
+        : (typeof record.code === 'string' ? record.code : (typeof record.detail === 'string' ? record.detail : undefined))
+      if (message !== undefined && code !== undefined && message !== code) return clip(message + ' (' + code + ')', limit)
+      if (message !== undefined) return clip(message, limit)
+      if (code !== undefined) return clip(code, limit)
+    }
+  } catch {
+    // Not JSON: fall through to the raw body.
+  }
+  return clip(trimmed, limit)
+}
+
+/** Whether a failed poll is worth retrying (transport hiccup, 5xx, 429 or 408). */
+function isRetryable(error: unknown): boolean {
+  if (!(error instanceof GenBoxError)) return true
+  const status = error.status
+  if (status === undefined) return true
+  return status >= 500 || status === 429 || status === 408
+}
+
 /** Read-only HTTP client for a running GenBox FastAPI server. */
 export class GenBoxClient {
   readonly baseUrl: string
@@ -85,7 +125,7 @@ export class GenBoxClient {
     const text = await response.text()
     if (!response.ok) {
       throw new GenBoxError(
-        'GenBox ' + method + ' ' + path + ' failed (HTTP ' + response.status + '): ' + text.slice(0, 500),
+        'GenBox ' + method + ' ' + path + ' failed (HTTP ' + response.status + '): ' + describeFailure(text),
         response.status,
       )
     }
@@ -101,14 +141,38 @@ export class GenBoxClient {
   async waitFor<T>(
     path: string,
     isDone: (value: T) => boolean,
-    options: { intervalMs?: number | undefined; timeoutMs?: number | undefined; signal?: AbortSignal | undefined } = {},
+    options: {
+      intervalMs?: number | undefined
+      timeoutMs?: number | undefined
+      signal?: AbortSignal | undefined
+      /** Consecutive retryable poll failures to absorb before giving up. */
+      toleratedFailures?: number | undefined
+    } = {},
   ): Promise<T> {
     const intervalMs = options.intervalMs ?? 2000
     const deadline = Date.now() + (options.timeoutMs ?? 900000)
+    // A generated clip can take minutes; one dropped poll must not lose the task.
+    const tolerated = options.toleratedFailures ?? 5
+    let failures = 0
+    let lastError: unknown
     for (;;) {
-      const value = await this.json<T>('GET', path, undefined, options.signal)
-      if (isDone(value)) return value
-      if (Date.now() > deadline) throw new GenBoxError('Timed out waiting for ' + path)
+      try {
+        const value = await this.json<T>('GET', path, undefined, options.signal)
+        failures = 0
+        lastError = undefined
+        if (isDone(value)) return value
+      } catch (error) {
+        // Cancellation, timeouts and permanent refusals belong to the caller.
+        if (error instanceof Error && (error.name === 'AbortError' || error.name === 'TimeoutError')) throw error
+        if (!isRetryable(error)) throw error
+        failures += 1
+        lastError = error
+        if (failures > tolerated) throw error
+      }
+      if (Date.now() > deadline) {
+        if (failures > 0 && lastError !== undefined) throw lastError
+        throw new GenBoxError('Timed out waiting for ' + path)
+      }
       await this.sleep(intervalMs, options.signal)
     }
   }
@@ -142,7 +206,10 @@ export class GenBoxClient {
       if (error instanceof Error && (error.name === 'AbortError' || error.name === 'TimeoutError')) throw error
       throw transportError(this.baseUrl, url, error)
     }
-    if (!response.ok) throw new GenBoxError('Download failed (HTTP ' + response.status + '): ' + url, response.status)
+    if (!response.ok) {
+      const detail = describeFailure(await response.text().catch(() => ''), 200)
+      throw new GenBoxError('Download failed (HTTP ' + response.status + '): ' + url + ' - ' + detail, response.status)
+    }
     await mkdir(dirname(targetPath), { recursive: true })
     await writeFile(targetPath, Buffer.from(await response.arrayBuffer()))
     return targetPath
