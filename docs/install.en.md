@@ -138,10 +138,21 @@ The Desktop reads its profile at startup, so restart DSH NEXT. Verify first in a
 
 ### 8) `pnpm run build` fails with an access-denied error
 
+The build output directory occasionally ends up owned by another account, so `--clean` cannot delete its files.
+Rebuild through the wrapper: `powershell -File .\scripts\rebuild.ps1`.
+
+### 7b) `pnpm run build` fails with an access-denied error
+
 The output directory ended up owned by another account. Move it aside and rebuild; the leftovers need an
 administrator shell to delete. Details in [local-dev.md](./local-dev.md).
 
-### 9) `npm publish` returns 403 about two-factor authentication
+### 9) A tool reports `GenBox is not answering at http://127.0.0.1:8892`
+
+GenBox is not running, or `baseUrl` points at the wrong port. Start GenBox (section 2 of
+[local-dev.md](./local-dev.md)), then confirm the workbench URL opens with `genbox_open_workbench`;
+`genbox_doctor` walks the whole chain item by item.
+
+### 10) `npm publish` returns 403 about two-factor authentication
 
 Publishing with 2FA enabled needs a one-time code: `npm publish --otp=<code>`, or a granular access token that is
 allowed to bypass 2FA.

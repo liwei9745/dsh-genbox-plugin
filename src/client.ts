@@ -19,6 +19,24 @@ export class GenBoxError extends Error {
   }
 }
 
+/**
+ * Turn a transport failure into something the user can act on. The most common
+ * first-run failure by far is "GenBox is not running", and a bare "fetch failed"
+ * tells nobody what to do about it.
+ */
+function transportError(baseUrl: string, path: string, error: unknown): GenBoxError {
+  const cause = (error as { cause?: { code?: unknown } }).cause
+  const code = typeof cause?.code === 'string' ? cause.code : (typeof (error as { code?: unknown }).code === 'string' ? String((error as { code?: unknown }).code) : '')
+  const raw = error instanceof Error ? error.message : String(error)
+  const unreachable = code === 'ECONNREFUSED' || code === 'ENOTFOUND' || code === 'EAI_AGAIN' || code === 'ECONNRESET' || /fetch failed/i.test(raw)
+  if (!unreachable) return new GenBoxError('GenBox request ' + path + ' failed: ' + raw)
+  return new GenBoxError(
+    'GenBox is not answering at ' + baseUrl + ' (' + path + (code === '' ? '' : ', ' + code) + '). '
+    + 'Start the GenBox server, or point the plugin baseUrl at the port it actually listens on. '
+    + 'genbox_open_workbench reports the workbench URL and genbox_doctor checks the whole setup.',
+  )
+}
+
 /** Read-only HTTP client for a running GenBox FastAPI server. */
 export class GenBoxClient {
   readonly baseUrl: string
@@ -56,7 +74,14 @@ export class GenBoxClient {
       signal: this.signal(signal, timeoutMs),
     }
     if (body !== undefined) init.body = JSON.stringify(body)
-    const response = await fetch(this.baseUrl + path, init)
+    let response: Response
+    try {
+      response = await fetch(this.baseUrl + path, init)
+    } catch (error) {
+      // A cancellation or a timeout is about this call, not about reachability.
+      if (error instanceof Error && (error.name === 'AbortError' || error.name === 'TimeoutError')) throw error
+      throw transportError(this.baseUrl, path, error)
+    }
     const text = await response.text()
     if (!response.ok) {
       throw new GenBoxError(
@@ -110,7 +135,13 @@ export class GenBoxClient {
       : this.baseUrl + (urlOrPath.startsWith('/') ? urlOrPath : '/' + urlOrPath)
     const init: RequestInit = { headers: this.headers(false) }
     if (signal !== undefined) init.signal = signal
-    const response = await fetch(url, init)
+    let response: Response
+    try {
+      response = await fetch(url, init)
+    } catch (error) {
+      if (error instanceof Error && (error.name === 'AbortError' || error.name === 'TimeoutError')) throw error
+      throw transportError(this.baseUrl, url, error)
+    }
     if (!response.ok) throw new GenBoxError('Download failed (HTTP ' + response.status + '): ' + url, response.status)
     await mkdir(dirname(targetPath), { recursive: true })
     await writeFile(targetPath, Buffer.from(await response.arrayBuffer()))

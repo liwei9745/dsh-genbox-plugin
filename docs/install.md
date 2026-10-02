@@ -130,6 +130,24 @@ GenBox 发布包不含 ONNX 抠图 checkpoint，需要操作者手动放置并�
 
 桌面端只在启动时读 profile，需要重启 DSH NEXT。装之前建议先在独立 profile 验证。
 
+### 8) 工具报 `GenBox is not answering at http://127.0.0.1:8892`
+
+GenBox 没在运行，或者 `baseUrl` 指错了端口。先启动 GenBox（见 [local-dev.md](./local-dev.md) 第 2 节），
+再用 `genbox_open_workbench` 确认工作台 URL 能打开；`genbox_doctor` 会把整条链路逐项检查一遍。
+
+### 9) `pnpm run build` 报 `拒绝访问。 (os error 5)`
+
+构建输出目录偶尔会被系统写成「管理员组所有」，导致 `--clean` 删不掉旧文件。用包装脚本重建即可：
+
+```powershell
+powershell -File .\scripts\rebuild.ps1
+```
+
+### 10) `npm publish` 返回 403，提到 two-factor authentication
+
+账号开了 2FA 时发布必须带一次性验证码：`npm publish --otp=<code>`，或使用一个明确允许绕过 2FA 的
+granular access token。
+
 ## 6. 卸载
 
 ```powershell

@@ -1,5 +1,27 @@
 # Changelog
 
+## Unreleased
+
+首装引导与更友好的失败信息（尚未发到 npm；已进仓库与 CI）。
+
+新增：
+
+- `genbox_open_workbench`：报告/打开 GenBox 工作台，装完插件后的第一步；GenBox 没在跑时明确说明。
+- `genbox_doctor` 现在返回 `nextSteps` 清单（打开工作台 → 说一句具体需求 → 用 `genbox_gallery` 收结果）。
+- `genbox_video_edit`：11 种本地 ffmpeg 剪辑（裁剪 / 拼接 / 变速 / 静音 / 缩放 / 裁切 / 音量 / 换音轨 / 烧字幕 / 转 GIF / 抽帧）。
+- `genbox_image_edit` 的 `annotations` 精准改图（箭头 / 方框 / 椭圆 / 画笔，插件自己合成蒙版）。
+- `genbox_task` 后台任务收取；`genbox_gallery` 支持 `type` / `model` / `query` / `since` 过滤。
+
+改进：
+
+- 连不上 GenBox 时的报错改成可执行的一句话，并指向 `genbox_open_workbench` / `genbox_doctor`；取消（abort）仍原样抛出。
+- 媒体工具实现 `presentCall` / `presentResult` / `presentationMeta`（结果卡片从持久化 meta 重建）。
+- 实验性 `nativeJobs` 配置：后台视频任务交给 DSH 的 `ctx.jobs`（默认关闭）。
+
+工程：
+
+- 验证套件 11 个，`node scripts/verify-all.mjs` 一条命令跑完；CI（GitHub Actions）全绿。
+- `scripts/rebuild.ps1`：绕开本机偶发的"构建目录被系统收走权限"问题。
 ## 0.1.0
 
 首个版本。把本地 [GenBox](https://github.com/liwei9745/GenBox) 媒体工作台接入 DeepSeek Harness。

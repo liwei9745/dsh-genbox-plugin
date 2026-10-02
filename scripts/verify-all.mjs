@@ -26,6 +26,7 @@ function ffmpegUp() {
 
 const suites = [
   { name: 'presentation contract', file: 'verify-presentation.mjs', needs: [] },
+  { name: 'error messages', file: 'verify-errors.mjs', needs: [] },
   { name: 'onboarding (workbench + doctor)', file: 'verify-onboarding.mjs', needs: ['genbox'] },
   { name: 'annotation overlay', file: 'verify-annotate.mjs', needs: [] },
   { name: 'local video editing', file: 'verify-video-edit.mjs', needs: ['ffmpeg'] },
