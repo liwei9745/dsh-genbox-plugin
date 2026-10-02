@@ -99,7 +99,11 @@ for (const suite of suites) {
     return lines.length > 0 ? lines[lines.length - 1].slice(0, 90) : ''
   }
   const verdict = lastLine(run.stdout) || lastLine(run.stderr) || '(no output)'
-  results.push({ ...suite, status: run.status === 0 ? 'PASS' : 'FAIL', detail: verdict, ms: Date.now() - started })
+  // A failing suite has to explain itself: keep its stderr for the summary.
+  const diagnostic = run.status === 0
+    ? ''
+    : String(run.stderr ?? '').trim().split('\n').filter((line) => line.trim() !== '').slice(-6).join(' | ')
+  results.push({ ...suite, status: run.status === 0 ? 'PASS' : 'FAIL', detail: verdict, diagnostic, ms: Date.now() - started })
   process.stdout.write((run.status === 0 ? '.' : 'F'))
 }
 console.log('')
@@ -111,6 +115,9 @@ for (const result of results) {
   const pad = ' '.repeat(width - result.name.length)
   const timing = result.ms === undefined ? '' : (' (' + result.ms + 'ms)')
   console.log('  ' + result.status.padEnd(5) + result.name + pad + '  ' + result.detail + timing)
+  if (result.diagnostic !== undefined && result.diagnostic !== '') {
+    console.log('        why: ' + result.diagnostic.slice(0, 600))
+  }
 }
 console.log('')
 console.log(failed === 0 ? 'all runnable suites passed' : failed + ' suite(s) failed')

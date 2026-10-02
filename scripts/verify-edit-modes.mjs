@@ -97,6 +97,32 @@ if (incapable === undefined) {
   console.log('precision_edit (incapable provider) ->', refusal.slice(0, 220))
 }
 
+// inpaint on a provider that declares the mask but sits on the wrong transport:
+// GenBox refuses, and the hint must name only the providers that would work.
+const wrongTransport = all.find((provider) => provider.enabled === true && (provider.type ?? 'image') === 'image'
+  && provider.capabilities?.inpaint_mask === true && provider.endpointType !== 'openai')
+const usableMask = all
+  .filter((provider) => provider.enabled === true && provider.capabilities?.inpaint_mask === true && provider.endpointType === 'openai')
+  .map((provider) => provider.id)
+if (wrongTransport === undefined) {
+  console.log('  [skip] no enabled provider declares inpaint_mask on a non-openai transport')
+} else {
+  let refusal = ''
+  try {
+    await tool('genbox_image_edit').execute(
+      { prompt: 'change the sky', image: source, mask, mode: 'inpaint', providers: [wrongTransport.id], size: '512x512' },
+      exec,
+    )
+  } catch (error) {
+    refusal = error.message
+  }
+  check('inpaint on a wrong-transport provider fails with the GenBox reason', /provider_unsupported/i.test(refusal))
+  check('the inpaint refusal names the providers that would work', usableMask.length > 0 && usableMask.every((id) => refusal.includes(id)))
+  const offered = refusal.includes('endpoint_type=openai:') ? refusal.split('endpoint_type=openai:')[1] : ''
+  check('the inpaint refusal does not offer the wrong-transport provider', offered !== '' && !offered.includes(wrongTransport.id))
+  console.log('inpaint (wrong transport) ->', refusal.slice(0, 220))
+}
+
 let failures = 0
 for (const [label, ok] of checks) {
   if (!ok) failures += 1

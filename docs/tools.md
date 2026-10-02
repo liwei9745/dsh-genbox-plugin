@@ -17,7 +17,7 @@
 | [`genbox_image_variations`](#genbox_image_variations) | Ask a GenBox image provider for visual variations of an existing image | 6 |
 | [`genbox_open_workbench`](#genbox_open_workbench) | Open the local GenBox workbench (its own web UI) and report whether the server answers | 2 |
 | [`genbox_prompt_optimize`](#genbox_prompt_optimize) | Rewrite a rough image prompt into a richer one with GenBox's configured prompt-assistant LLM | 2 |
-| [`genbox_providers`](#genbox_providers) | List the providers a local GenBox server has configured (image, video, or LLM), with enabled state, models, and declared capabilities | 2 |
+| [`genbox_providers`](#genbox_providers) | List the providers a local GenBox server has configured (image, video, or LLM), with enabled state, models, declared capabilities and transport (endpointType) | 2 |
 | [`genbox_task`](#genbox_task) | Check or cancel a GenBox job | 4 |
 | [`genbox_video_edit`](#genbox_video_edit) | Edit a local video with ffmpeg - no GenBox server or API key needed | 15 |
 | [`genbox_video_generate`](#genbox_video_generate) | Generate a video through a local GenBox server: text-to-video (mode=ti2vid), image-to-video (mode=i2vid with one reference image) or first/last keyframes (mode=keyframes with exactly two images) | 14 |
@@ -167,7 +167,7 @@ Rewrite a rough image prompt into a richer one with GenBox's configured prompt-a
 ## genbox_providers
 
 ```
-List the providers a local GenBox server has configured (image, video, or LLM), with enabled state, models, and declared capabilities. Call this before generating to choose a provider whose model supports the operation and size you need.
+List the providers a local GenBox server has configured (image, video, or LLM), with enabled state, models, declared capabilities and transport (endpointType). Call this before generating to choose a provider whose model supports the operation and size you need; note that mask inpaint needs an enabled provider with endpointType=openai as well as capabilities.inpaint_mask.
 ```
 
 | Parameter | Type | Required | Meaning |

@@ -26,11 +26,17 @@ async function explainProviderUnsupported(
   try {
     const providers = await listProviders(client, signal)
     const capable = providers
-      .filter((provider) => provider.enabled === true && provider.capabilities?.[capability] === true)
+      .filter((provider) => provider.enabled === true
+        && provider.capabilities?.[capability] === true
+        // GenBox's own wording: "inpaint requires an enabled image provider with
+        // endpoint_type=openai and capabilities.inpaint_mask=true" - a provider on
+        // the 'auto' transport does not qualify, even when it declares the mask.
+        && (mode !== 'inpaint' || provider.endpoint_type === 'openai'))
       .map((provider) => provider.id)
+    const condition = mode === 'inpaint' ? 'inpaint_mask and endpoint_type=openai' : capability
     return new Error(message + (capable.length > 0
-      ? ' Enabled providers that declare ' + capability + ': ' + capable.join(', ') + '.'
-      : ' No enabled provider declares ' + capability + '; enable one in GenBox, or use another mode (see genbox_providers).'))
+      ? ' Enabled providers with ' + condition + ': ' + capable.join(', ') + '.'
+      : ' No enabled provider has ' + condition + '; adjust one in GenBox, or use another mode (see genbox_providers).'))
   } catch {
     return error
   }

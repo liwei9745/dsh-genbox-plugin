@@ -76,6 +76,8 @@ export interface GenBoxProvider {
   quality?: string
   capabilities?: Record<string, boolean>
   model_capabilities?: JsonObject
+  /** Transport GenBox will use: 'openai' matters for mask inpaint, 'auto' does not qualify. */
+  endpoint_type?: string
 }
 
 export async function listProviders(client: GenBoxClient, signal?: AbortSignal | undefined): Promise<GenBoxProvider[]> {

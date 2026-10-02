@@ -15,6 +15,9 @@ function project(provider: GenBoxProvider) {
     defaultSize: provider.size ?? '',
     capabilities: provider.capabilities ?? {},
     modelCapabilities: provider.model_capabilities ?? {},
+    // GenBox checks the transport as well as the capability: mask inpaint needs
+    // endpoint_type=openai, and 'auto' does not qualify even with inpaint_mask=true.
+    endpointType: provider.endpoint_type ?? '',
   }
 }
 
@@ -23,8 +26,9 @@ export function registerProviderTools(ctx: Context, client: GenBoxClient) {
     name: 'genbox_providers',
     description:
       'List the providers a local GenBox server has configured (image, video, or LLM), with enabled state, '
-      + 'models, and declared capabilities. Call this before generating to choose a provider whose model supports '
-      + 'the operation and size you need.',
+      + 'models, declared capabilities and transport (endpointType). Call this before generating to choose a provider '
+      + 'whose model supports the operation and size you need; note that mask inpaint needs an enabled provider with '
+      + 'endpointType=openai as well as capabilities.inpaint_mask.',
     parameters: {
       type: {
         type: 'string',

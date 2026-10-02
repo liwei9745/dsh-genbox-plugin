@@ -9,6 +9,12 @@
   所以「下载到的视频」从未被真正解码验证过——之前的断言只查了「文件非空」。现在 mock 在启动时用 ffmpeg 生成
   真实的 2 秒片段（ffmpeg 不可用时回退到占位数据并写明原因）。这条是旅程测试抓出来的。
 - 修正 `genbox_video_edit` 的工具描述：原来只列了 11 种操作里的 6 种（对照自动生成的 `docs/tools.md` 发现）。
+- **inpaint 的提示考虑传输方式**：用真实 provider 试出来的规则——GenBox 要求 inpaint 的 provider 同时满足
+  `capabilities.inpaint_mask=true` **和** `endpoint_type=openai`（本例 `gpt-image` 是 `auto`，
+  即使声明了 mask 也会被拒）。现在拒绝信息只列**真正可用**的 provider，不再误导。
+- `genbox_providers` 输出新增 `endpointType`，模型在动手前就能看出传输方式不匹配。
+- `verify-edit-modes.mjs` 增至 9 项断言（含wrong transport的拒绝与可用清单校验）。
+- `verify-all.mjs` 在套件失败时额外打印该套件的 stderr，失败原因不用再猜。
 - **能力拒绝给出可用清单**：GenBox 拒绝 `precision_edit`/`inpaint`（provider 没声明对应能力）时，
   工具会把失败原因**和当前已启用、确实支持该能力的 provider id 一起说出来**，而不是只丢一个 422；
   `genbox_image_edit` 的描述也补上了这个前提。
