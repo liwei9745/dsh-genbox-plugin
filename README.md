@@ -16,6 +16,23 @@ DSH agent → dsh-genbox-plugin (TypeScript) ──HTTP──▶ GenBox FastAPI 
 不修改 GenBox 本体：它本身已有 117 条 REST 路由，本插件只是调用方，因此 GenBox 可以独立升级。
 GenBox 是 GPL-3.0，本插件是 MIT——只通过 HTTP 调用，不含其源码。
 
+## 证据看板（不需要模型凭据）
+
+`sh
+node scripts/lab.mjs        # http://127.0.0.1:3098/
+`
+
+打开后可以看到：GenBox 连接状态与 provider、插件注册的工具清单（从构建产物里解析，不会撒谎）、
+GenBox 图库素材、本地产物缩略图，以及每条复现命令。
+
+三个端口别搞混：
+
+| 端口 | 是什么 |
+|---|---|
+| 3098 | **证据看板**（本插件自带，只读，无需凭据） |
+| 3099 | DSH 会话页（agent 聊天；需要模型凭据） |
+| 8892 | **GenBox 自己的工作台**（画图、看图库、配 provider） |
+
 ## 状态
 
 | 里程碑 | 内容 | 状态 |
