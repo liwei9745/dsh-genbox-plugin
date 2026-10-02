@@ -76,6 +76,15 @@ const first = generated.images?.[0]?.file
 check('generate: an image landed', generated.status === 'completed' && present(first))
 step('generated ' + first)
 
+// 3b. the same call can ask for several candidates at once
+const batch = await tool('genbox_image_generate').execute(
+  { prompt: 'a paper boat on a pond, two candidates', providers: [imageProvider.id], size: '512x512', count: 2 },
+  exec,
+)
+const batchFiles = (batch.images ?? []).map((image) => image.file)
+check('generate: count=2 returns two distinct files', batchFiles.length === 2 && batchFiles.every(present) && new Set(batchFiles).size === 2)
+step('batch of ' + batchFiles.length + ' -> ' + batchFiles.join(', '))
+
 // 3. edit that image (image-to-image)
 const edited = await tool('genbox_image_edit').execute(
   { prompt: 'make it dusk', image: first, mode: 'i2i', providers: [imageProvider.id] },

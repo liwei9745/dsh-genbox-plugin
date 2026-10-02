@@ -132,9 +132,11 @@ export class GenBoxClient {
       const text = await response.text()
       if (response.ok) return (text ? JSON.parse(text) : null) as T
 
-      // GenBox answers 429 while another generation of its own is in flight. The
-      // request was refused, so waiting and asking again cannot duplicate work -
-      // and a submit that just fails makes the caller redo the whole thing.
+      // GenBox answers 429 when its generation rate limit is hit (the upstream
+      // default is 10 requests per minute per IP, and only /api/generate is
+      // throttled). The request was refused, so waiting and asking again cannot
+      // duplicate work - and a submit that just fails makes the caller redo
+      // everything. The retry smooths over short bursts, it is not a long wait.
       //
       // Only 429: GenBox reports permanent "this feature is not installed" states
       // (the missing cutout checkpoint) as 503, and waiting on those just delays a
@@ -147,7 +149,10 @@ export class GenBoxClient {
       }
       throw new GenBoxError(
         'GenBox ' + method + ' ' + path + ' failed (HTTP ' + response.status + '): ' + describeFailure(text)
-        + (busy ? ' (GenBox was busy for ' + (attempt + 1) + ' attempt(s); another generation may still be running)' : ''),
+        + (busy
+          ? ' (still rate limited after ' + (attempt + 1) + ' attempt(s): GenBox throttles generations - the upstream'
+            + ' default is 10 per minute per IP - so wait a moment or send fewer at once)'
+          : ''),
         response.status,
       )
     }

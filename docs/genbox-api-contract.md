@@ -157,6 +157,14 @@ config.py:1378:     return secrets.compare_digest(_hash_admin_key(key), stored_h
 | `upscale_method` | str | `"lanczos3"` | lanczos3/bicubic/nearest |
 | `upscale_ratio` | str | `"original"` | 1:1/16:9/.../original |
 
+> **实测注意（2026-10-02）**：`upscale_to` 的本地放大**失败时会静默保留原图**——provider 日志里能看到
+> `⤢ 正在本地放大到 1024x1024 (original)` 紧跟 `⚠ 放大失败(保留原图)`，接口仍然返回 completed，
+> 产物还是原尺寸。因此本插件**不暴露** `upscale_to`：与其给模型一个要 1024 却可能拿到 512 且不报错的参数，
+> 不如让它显式调用 `genbox_image_upscale`（那条路径失败会报错）。
+
+> **429 的语义**：仅 `/api/generate` 受限，默认 **10 次/分钟/IP**，返回 `{"detail":"请求过于频繁，请稍后再试"}`。
+> 插件的提交类调用会做**短促重试**（3 次、每次 3 秒）以吸收突发，仍失败时把这条规则写进错误里。
+
 输入校验（`_validate_generation_request_inputs`，main.py:1139-1490）：
 
 - t2i 禁止任何图像/遮罩/批注字段（1181-1199）。
