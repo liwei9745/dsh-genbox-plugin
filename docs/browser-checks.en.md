@@ -22,7 +22,7 @@ instead of producing a false failure.
 | 2 | Generate page left splitter `#resizeLeft` | hit-tests the grip mark (`left+10`) | left column +120 / preview -120 | 1920x1080 | ok |
 | 3 | Precision canvas corner grip | **reachability is the assertion** | - (handler maths is covered by the static contract test) | 1920x1080 | ok |
 | 4 | Precision canvas bottom bar | needs a loaded image and fullscreen | height only: h +120, w 0 | 1920x1080 | ok |
-| 5 | Generate page vertical splitter (narrow) | hit test | when the bar is not laid out, assert the panes still fit the column | 768x900 | known upstream overflow: panes 490+349=839 vs a 721px column |
+| 5 | Generate page vertical splitter (narrow) | hit test | when the bar is not laid out, assert the panes still fit the column | 768x900 | ok: panes 312+222=534 within a 721px column (was 490+349=839) |
 
 ## Reproducing
 
