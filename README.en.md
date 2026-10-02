@@ -5,7 +5,8 @@ generation) into [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harn
 edit them, generate video, and cut video locally - plus the media library and prompt assistant.
 
 Design notes live in [PLAN.md](./PLAN.md); install, configuration and troubleshooting in [docs/install.md](./docs/install.md);
-the local development environment (including a zero-API-key mock provider) in [docs/local-dev.md](./docs/local-dev.md).
+the local development environment (including a zero-API-key mock provider) in [docs/local-dev.md](./docs/local-dev.md)
+(Chinese); the English install and troubleshooting guide is [docs/install.en.md](./docs/install.en.md).
 
 ## Shape
 
