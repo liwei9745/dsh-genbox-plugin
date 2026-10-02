@@ -26,6 +26,13 @@ function marketApp() {
   return candidates.find((candidate) => existsSync(join(candidate, 'node_modules', 'dshmarket', 'lib', 'compatibility.js')))
 }
 
+/** A profile that already has this plugin installed from npm, when one is configured. */
+function installedProfile() {
+  const profile = process.env.DSH_PROFILE_DIR
+  if (typeof profile !== 'string' || profile === '') return undefined
+  return existsSync(join(profile, 'node_modules', 'dsh-genbox-plugin', 'lib', 'index.js')) ? profile : undefined
+}
+
 function ffmpegUp() {
   try {
     const probe = spawnSync(process.env.FFMPEG_PATH ?? 'ffmpeg', ['-version'], { encoding: 'utf8' })
@@ -37,6 +44,7 @@ const suites = [
   { name: 'presentation contract', file: 'verify-presentation.mjs', needs: [] },
   { name: 'error messages', file: 'verify-errors.mjs', needs: [] },
   { name: 'plugin market readiness', file: 'verify-market-readiness.mjs', needs: ['market'] },
+  { name: 'installed package matches', file: 'verify-installed-package.mjs', needs: ['installed'] },
   { name: 'onboarding (workbench + doctor)', file: 'verify-onboarding.mjs', needs: ['genbox'] },
   { name: 'annotation overlay', file: 'verify-annotate.mjs', needs: [] },
   { name: 'local video editing', file: 'verify-video-edit.mjs', needs: ['ffmpeg'] },
@@ -52,17 +60,20 @@ const suites = [
 const hasGenbox = await genboxUp()
 const hasFfmpeg = ffmpegUp()
 const hasMarket = marketApp() !== undefined
+const hasInstalled = installedProfile() !== undefined
 console.log(
   'prerequisites: genbox=' + (hasGenbox ? 'up' : 'down')
   + ' ffmpeg=' + (hasFfmpeg ? 'ok' : 'missing')
-  + ' market=' + (hasMarket ? 'ok' : 'missing'),
+  + ' market=' + (hasMarket ? 'ok' : 'missing')
+  + ' installed=' + (hasInstalled ? 'ok' : 'set DSH_PROFILE_DIR'),
 )
 
 const results = []
 for (const suite of suites) {
   const missing = suite.needs.filter((need) => (need === 'genbox' && !hasGenbox)
     || (need === 'ffmpeg' && !hasFfmpeg)
-    || (need === 'market' && !hasMarket))
+    || (need === 'market' && !hasMarket)
+    || (need === 'installed' && !hasInstalled))
   if (missing.length > 0) {
     results.push({ ...suite, status: 'SKIP', detail: 'needs ' + missing.join(', ') })
     continue
