@@ -139,12 +139,8 @@ The Desktop reads its profile at startup, so restart DSH NEXT. Verify first in a
 ### 8) `pnpm run build` fails with an access-denied error
 
 The build output directory occasionally ends up owned by another account, so `--clean` cannot delete its files.
-Rebuild through the wrapper: `powershell -File .\scripts\rebuild.ps1`.
-
-### 7b) `pnpm run build` fails with an access-denied error
-
-The output directory ended up owned by another account. Move it aside and rebuild; the leftovers need an
-administrator shell to delete. Details in [local-dev.md](./local-dev.md).
+Rebuild through the wrapper: `powershell -File .\scripts\rebuild.ps1`. The leftovers need an administrator
+shell to delete; details in [local-dev.md](./local-dev.md).
 
 ### 9) A tool reports `GenBox is not answering at http://127.0.0.1:8892`
 
