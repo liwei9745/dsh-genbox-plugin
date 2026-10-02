@@ -1,5 +1,6 @@
 // Read-only evidence board for the GenBox plugin: no model credentials needed.
 //   node scripts/lab.mjs   ->  http://127.0.0.1:3098/
+import { spawn } from 'node:child_process'
 import { createServer } from 'node:http'
 import { readdir, readFile, stat } from 'node:fs/promises'
 import { basename, extname, join, resolve, sep } from 'node:path'
@@ -15,6 +16,26 @@ const GENBOX = process.env.GENBOX_BASE_URL ?? 'http://127.0.0.1:8892'
 
 const IMAGE_EXT = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif'])
 const VIDEO_EXT = new Set(['.mp4', '.webm', '.mov'])
+
+let verifyState = { status: 'idle', startedAt: 0, finishedAt: 0, output: '', exitCode: null }
+
+/** Re-run scripts/verify-all.mjs and remember the tail of its output. */
+function runVerify() {
+  if (verifyState.status === 'running') return false
+  verifyState = { status: 'running', startedAt: Date.now(), finishedAt: 0, output: '', exitCode: null }
+  const child = spawn(process.execPath, [join(ROOT, 'scripts', 'verify-all.mjs')], { cwd: ROOT })
+  let buffer = ''
+  const collect = (chunk) => { buffer += String(chunk) }
+  child.stdout.on('data', collect)
+  child.stderr.on('data', collect)
+  child.on('close', (code) => {
+    verifyState.status = code === 0 ? 'passed' : 'failed'
+    verifyState.exitCode = code
+    verifyState.finishedAt = Date.now()
+    verifyState.output = buffer.slice(-6000)
+  })
+  return true
+}
 
 async function collectLocal(dir, prefix, depth) {
   const found = []
@@ -121,6 +142,22 @@ function genboxCards(items) {
   return cards.length > 0 ? cards.join('') : '<p class="empty">（图库里还没有素材）</p>'
 }
 
+function verifyPanel() {
+  if (verifyState.status === 'running') {
+    return '<p>正在运行 <code>scripts/verify-all.mjs</code>（约 40 秒）… <a href="/">刷新</a></p>'
+      + '<script>setTimeout(function () { location.reload() }, 6000)</script>'
+  }
+  const when = verifyState.finishedAt === 0 ? '尚未运行过' : new Date(verifyState.finishedAt).toLocaleString()
+  const verdict = verifyState.status === 'passed' ? '全部通过' : verifyState.status === 'failed' ? '有失败' : '未运行'
+  const parts = ['<p>上次结果：<b>' + verdict + '</b>（' + when + '）<a class="btn" href="/run-verify">重新跑一遍 verify-all</a></p>']
+  if (verifyState.output !== '') {
+    const newline = String.fromCharCode(10)
+    const tail = verifyState.output.split(newline).filter((line) => line.trim() !== '').slice(-16).join(newline)
+    parts.push('<pre>' + esc(tail) + '</pre>')
+  }
+  return parts.join('')
+}
+
 async function render() {
   const [tools, genbox, local, receipt] = await Promise.all([collectTools(), collectGenbox(), collectLocal(OUT_DIR, 'out', 3), collectReceipt()])
   const providerRows = genbox.ok
@@ -154,6 +191,7 @@ async function render() {
     'figcaption{font-size:11.5px;color:#8b93a1;margin-top:5px;word-break:break-all}figcaption span{color:#5f6672}',
     'pre{background:#0b0d11;border:1px solid #242a35;border-radius:8px;padding:12px;overflow:auto;font-size:12.5px}',
     '.empty{color:#5f6672;margin:6px 0}',
+    '.btn{display:inline-block;background:#1f6feb;color:#fff;border-radius:6px;padding:3px 10px;text-decoration:none;margin-left:8px}',
     '</style></head><body>',
     '<header><h1>GenBox × DSH 实验室</h1><p class="sub">只展示证据，不需要模型凭据 · ' + status + '</p></header>',
     '<h2>1. 插件是否已经在本机 DSH 里启用</h2><div class="card"><ul>' + receiptRows.join('') + '</ul></div>',
@@ -168,6 +206,7 @@ async function render() {
     'node scripts/verify-video-edit.mjs   # 本地 ffmpeg 剪辑（不需要 GenBox）',
     'node scripts/verify-media.mjs        # 图库 + 提示词优化',
     'node scripts/publish.mjs             # 发布预检（不联网改任何东西）</pre></div>',
+    '<h2>7. 一键复验</h2><div class="card">' + verifyPanel() + '</div>',
     '<p class="sub" style="margin:20px 28px 40px">本看板 3098 · DSH 会话 3099 · GenBox 工作台 8892</p>',
     '</body></html>',
   ].join('\n')
@@ -178,6 +217,12 @@ createServer(async (request, response) => {
   if (url.pathname === '/') {
     response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
     response.end(await render())
+    return
+  }
+  if (url.pathname === '/run-verify') {
+    runVerify()
+    response.writeHead(302, { Location: '/' })
+    response.end()
     return
   }
   if (url.pathname.startsWith('/out/')) {
