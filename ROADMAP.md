@@ -12,10 +12,10 @@
 |---|---|---|---|
 | G0 可用 | 10 个工具覆盖生图/改图/视频/媒体库 | `verify-tools.mjs` 端到端 OK；`tsc --noEmit` 干净 | ✅ 已完成 |
 | G0.5 可装 | 打包成 bundle 并能被宿主加载 | `dsh plugin add <tarball>` 后启动打印 `[genbox] plugin loaded` | ✅ 已完成 |
-| G1 可分发 | GitHub 仓库 + npm 包 + `dsh-plugin` topic | 仓库公开可访问、`npm view dsh-genbox-plugin version` 返回 0.1.0、仓库 Topics 里有 `dsh-plugin` | ⏳ **等账号授权** |
-| G1.5 可发现 | Discussions 发帖 + 教程博客 | 帖子链接与博客链接 | ⏳ 草稿已写好，等账号授权 |
-| G2 可协作 | issue 模板、贡献指南、CI 绿、用户自检工具 | CI 在 PR 上跑通 typecheck+build；`genbox_doctor` 在健康/故障两种环境下给出正确结论；issue 模板要求贴 `verify-all` 与 doctor 输出 | 🟡 只等仓库建立 |
-| G3 真跑 | 真实 provider 端到端 | 用真实 Key 生成一张图、一段视频并落盘 | ⏳ 需要你在 GenBox 配 Key |
+| G1 可分发 | GitHub 仓库 + npm 包 + `dsh-plugin` topic | 仓库公开可访问、`npm view dsh-genbox-plugin version` 返回 0.1.0、仓库 Topics 里有 `dsh-plugin` | ✅ 已完成：仓库 [liwei9745/dsh-genbox-plugin](https://github.com/liwei9745/dsh-genbox-plugin) 公开、Topics 含 `dsh-plugin`、npm 最新 **0.1.1**（0.1.2 已构建待发布） |
+| G1.5 可发现 | Discussions 发帖 + 教程博客 | 帖子链接与博客链接 | ✅ 已完成：[#8669 公告帖](https://github.com/deepseek-ai/deepseek-harness/discussions/8669)（含 4 条作者更新）+ [#8672 教程](https://github.com/deepseek-ai/deepseek-harness/discussions/8672) |
+| G2 可协作 | issue 模板、贡献指南、CI 绿、用户自检工具 | CI 在 PR 上跑通 typecheck+build；`genbox_doctor` 在健康/故障两种环境下给出正确结论；issue 模板要求贴 `verify-all` 与 doctor 输出 | ✅ 已完成：CI 在每次 push 上跑 typecheck + build；`CONTRIBUTING.md`、`.github/ISSUE_TEMPLATE/bug_report.yml`、`genbox_doctor` 两态验证 |
+| G3 真跑 | 真实 provider 端到端 | 用真实 Key 生成一张图、一段视频并落盘 | ✅ 已完成（2026-10-02）：真实 `gpt-image` 上 t2i 92.5s、i2i、**inpaint 62.6s**、**variations 120.4s**，产物均落盘并有断言 |
 | G4a 非阻塞 | 生图/生视频支持 `background: true` 立即返回 + `genbox_task` 查询/下载/取消 | `scripts/verify-background.mjs`：生图 85ms 返回、随后 settled + 文件落盘；视频同样通过 | ✅ 已完成 |
 | G4b 体验 | UI 卡片（`presentCall`/`presentResult`/`presentationMeta`）、DSH 原生 `ctx.jobs` 后台任务 | `scripts/verify-presentation.mjs` 12 项断言全过（结果卡片从持久化 meta 重建）；`nativeJobs` 桩验证通过 | ✅ 已完成（渲染需客户端支持） |
 | G5a 视频编辑 | `genbox_video_edit`：trim / concat / speed / mute / resize / extract_frame（本地 ffmpeg，补 GenBox 的改视频缺口） | `scripts/verify-video-edit.mjs`：六个操作全部 FILE-OK（trim 1.53s、concat 5.04s、speed 1.67s、resize 160x120、帧 PNG） | ✅ 已完成 |
@@ -26,14 +26,29 @@
 
 ## 依赖你（或需要账号）的动作
 
-| 动作 | 需要什么 | 我能做到哪一步 |
+| 动作 | 需要什么 | 现状（2026-10-02） |
 |---|---|---|
-| 建 GitHub 仓库 | 你的账号登录（`gh auth login`）或给我一个有 `repo` 权限的 token | 仓库内容与 CI 已就绪，只差 push |
-| 发布 npm | `npm login`（或 `NPM_TOKEN`） | `pnpm pack` 与 `prepublishOnly` 已就绪，包名 `dsh-genbox-plugin` 未被占用 |
-| 加 `dsh-plugin` topic | 同上 | 命令已写在 README |
-| Discussions 发帖 | 同上 | 帖子草稿见 docs/community/discussions-post.md |
-| 真实 provider 联调 | 在 GenBox 界面配好 Key | 插件侧零改动 |
-| 装进 desktop profile | 你同意重启 DSH NEXT | 命令与回滚方式已写在 docs/install.md |
+| ~~建 GitHub 仓库~~ | — | ✅ 已公开，Topics 含 `dsh-plugin` |
+| ~~加 `dsh-plugin` topic~~ | — | ✅ 已完成 |
+| ~~Discussions 发帖~~ | — | ✅ #8669 / #8672 |
+| ~~真实 provider 联调~~ | — | ✅ 四项能力均已实测 |
+| **发布 npm 0.1.2** | **你的一次性密码（OTP）** | 包已构建好（34.9 kB / 7 文件 / shasum `382e1325`），`npm publish` 只差 OTP。两种方式见下 |
+| 装进 desktop profile（新版） | 你重启 DSH NEXT | 命令与回滚见 docs/install.md |
+| 把 GenBox 三个前端修复推上游 | 你同意 | 本地提交 `247f8f8` / `b4feb2d` / `36d9b8a` 已就绪 |
+
+### 发布 0.1.2 的两种方式（都不需要把密钥贴进聊天）
+
+```powershell
+# 方式 A：你直接跑，按提示输入认证器上的 6 位数字
+cd E:\AI\GenBox-dsh
+npm publish --access public --otp=<你的 6 位数字>
+
+# 方式 B：用仓库自带脚本（在终端里安全地输入，不落盘、不进历史）
+powershell -File scripts\publish-with-token.ps1 -Execute -NpmOnly
+```
+
+如果你在 npm 上建一个 **Granular Access Token**（读写该包、勾选 bypass 2FA），也可以交给我发布——
+但请只把它填进上面脚本的交互提示，不要贴进对话里。
 
 ## 节奏
 

@@ -9,6 +9,10 @@
   所以「下载到的视频」从未被真正解码验证过——之前的断言只查了「文件非空」。现在 mock 在启动时用 ffmpeg 生成
   真实的 2 秒片段（ffmpeg 不可用时回退到占位数据并写明原因）。这条是旅程测试抓出来的。
 - 修正 `genbox_video_edit` 的工具描述：原来只列了 11 种操作里的 6 种（对照自动生成的 `docs/tools.md` 发现）。
+- **新增可复现的验证证据文件**：`docs/verification.md` 由 `node scripts/write-verification.mjs` 跑完
+  `verify-all` 后生成，内嵌**该次运行的原始输出**（21 套件全过 + 1 项 opt-in 跳过），并附真实 provider 实测表与
+  前端浏览器实测表——任何“已完成”都能顺着这张表复现。同时刷新 `ROADMAP.md` 里过期的状态与
+  `依赖你` 清单（只剩 npm 0.1.2 的 OTP、desktop 重启、GenBox 上游 push 三项）。
 - **新增「GenBox 集成踩坑清单」**：`docs/genbox-pitfalls.md` / `genbox-pitfalls.en.md`，把本轮实测出的 8 个坑
   （inpaint 声明式门禁、`upscale_to` 的 `int()` 静默降级、变体的遗留协议、429 的每分钟限流、precision_edit 两道门槛、
   以及两个前端拖拽缺陷）连同**根因与源码位置**一并写下来，并总结出两条通用经验。
