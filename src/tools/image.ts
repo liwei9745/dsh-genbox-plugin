@@ -98,7 +98,7 @@ type ImageBatch = {
 }
 
 /** Pick the providers a request should target. */
-async function resolveTargets(
+export async function resolveTargets(
   client: GenBoxClient,
   config: Config,
   requested: string[] | undefined,
@@ -123,8 +123,21 @@ function providerSettings(ids: string[], model: string | undefined): Record<stri
   return settings
 }
 
+/**
+ * GenBox parses upscale_to with int(), so a "WxH" string makes it throw
+ * (measured: "invalid literal for int() with base 10: '1024x1024'") and the
+ * generation silently keeps the original size. Only the longest edge is accepted.
+ */
+export function normalizeUpscaleTarget(value: string): string {
+  const match = /^\s*(\d+)\s*(?:[x×*]\s*(\d+))?\s*$/.exec(value)
+  if (match === null) return value.trim()
+  const first = Number(match[1])
+  const second = match[2] === undefined ? first : Number(match[2])
+  return String(Math.max(first, second))
+}
+
 /** Submit a generation and wait for its terminal state. */
-async function runGeneration(
+export async function runGeneration(
   client: GenBoxClient,
   config: Config,
   body: Record<string, unknown>,
@@ -237,6 +250,14 @@ export function registerImageTools(ctx: Context, client: GenBoxClient, config: C
       count: { type: 'number', description: 'Images per provider (1-10). Defaults to 1.' },
       enhancePrompt: { type: 'boolean', description: 'Ask the configured LLM provider to rewrite the prompt first.' },
       outputDir: { type: 'string', description: 'Directory for the downloaded images. Defaults to the plugin outputDir config.' },
+      upscaleTo: {
+        type: 'string',
+        description: "Grow the finished image on the GenBox host before returning: '2048' or '2048x1536' "
+          + '(only the longest edge matters - GenBox parses it as an integer, so a WxH string is reduced to its '
+          + 'longest edge here). Requires GenBox to have Pillow available, which the packaged builds do.',
+      },
+      upscaleMethod: { type: 'string', enum: ['lanczos3', 'bicubic', 'nearest'], description: "Resampling for upscaleTo; defaults to 'lanczos3'." },
+      upscaleRatio: { type: 'string', description: "Aspect ratio for upscaleTo such as '16:9', or 'original' (default) to keep the source ratio." },
       background: {
         type: 'boolean',
         description: 'Return as soon as GenBox accepts the job instead of waiting for the images. Poll with genbox_task.',
@@ -281,6 +302,11 @@ export function registerImageTools(ctx: Context, client: GenBoxClient, config: C
         const quantities: Record<string, number> = {}
         for (const id of targets) quantities[id] = args.count
         body.quantities = quantities
+      }
+      if (args.upscaleTo !== undefined && args.upscaleTo.trim() !== '') {
+        body.upscale_to = normalizeUpscaleTarget(args.upscaleTo)
+        if (args.upscaleMethod !== undefined) body.upscale_method = args.upscaleMethod
+        if (args.upscaleRatio !== undefined && args.upscaleRatio !== '') body.upscale_ratio = args.upscaleRatio
       }
       return await runGeneration(
         client,

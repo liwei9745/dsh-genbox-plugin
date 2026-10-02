@@ -12,9 +12,9 @@
 | [`genbox_gallery`](#genbox_gallery) | List the most recent items in the GenBox media library (images and videos, newest first) and optionally copy them to a local directory | 6 |
 | [`genbox_health`](#genbox_health) | Check whether the local GenBox server is reachable and report its runtime status | 0 |
 | [`genbox_image_edit`](#genbox_image_edit) | Edit an existing image through a local GenBox server | 14 |
-| [`genbox_image_generate`](#genbox_image_generate) | Generate images from a text prompt through a local GenBox server | 9 |
+| [`genbox_image_generate`](#genbox_image_generate) | Generate images from a text prompt through a local GenBox server | 12 |
 | [`genbox_image_upscale`](#genbox_image_upscale) | Upscale an image locally through GenBox (Lanczos/Bicubic/Nearest) | 5 |
-| [`genbox_image_variations`](#genbox_image_variations) | Ask a GenBox image provider for visual variations of an existing image | 6 |
+| [`genbox_image_variations`](#genbox_image_variations) | Ask a GenBox image provider for visual variations of an existing image | 7 |
 | [`genbox_open_workbench`](#genbox_open_workbench) | Open the local GenBox workbench (its own web UI) and report whether the server answers | 2 |
 | [`genbox_prompt_optimize`](#genbox_prompt_optimize) | Rewrite a rough image prompt into a richer one with GenBox's configured prompt-assistant LLM | 2 |
 | [`genbox_providers`](#genbox_providers) | List the providers a local GenBox server has configured (image, video, or LLM), with enabled state, models, declared capabilities and transport (endpointType) | 2 |
@@ -108,6 +108,9 @@ Generate images from a text prompt through a local GenBox server. GenBox fans th
 | `count` | number | no | Images per provider (1-10). Defaults to 1. |
 | `enhancePrompt` | boolean | no | Ask the configured LLM provider to rewrite the prompt first. |
 | `outputDir` | string | no | Directory for the downloaded images. Defaults to the plugin outputDir config. |
+| `upscaleTo` | string | no | Grow the finished image on the GenBox host before returning: '2048' or '2048x1536' (only the longest edge matters - GenBox parses it as an integer, so a WxH string is reduced to its longest edge here). Requires GenBox to have Pillow available, which the packaged builds do. |
+| `upscaleMethod` | one of: `lanczos3` | `bicubic` | `nearest` | no | Resampling for upscaleTo; defaults to 'lanczos3'. |
+| `upscaleRatio` | string | no | Aspect ratio for upscaleTo such as '16:9', or 'original' (default) to keep the source ratio. |
 | `background` | boolean | no | Return as soon as GenBox accepts the job instead of waiting for the images. Poll with genbox_task. |
 
 Declares a UI render intent (`presentCall` / `presentResult`).
@@ -129,7 +132,7 @@ Upscale an image locally through GenBox (Lanczos/Bicubic/Nearest). Runs on the G
 ## genbox_image_variations
 
 ```
-Ask a GenBox image provider for visual variations of an existing image. This is synchronous and requires a configured provider with an API key.
+Ask a GenBox image provider for visual variations of an existing image. GenBox's native path proxies the legacy OpenAI /images/variations contract, which some gateways and the gpt-image family do not implement; with strategy="auto" the tool then repaints candidates from the same source through mode=i2i, so variations work with any provider that can edit.
 ```
 
 | Parameter | Type | Required | Meaning |
@@ -138,7 +141,8 @@ Ask a GenBox image provider for visual variations of an existing image. This is 
 | `provider` | string | no | Provider id to use; defaults to the first enabled image provider. |
 | `model` | string | no | Model id to request. |
 | `size` | string | no | Canvas size such as '1024x1024'. |
-| `n` | number | no | How many variations (1-4, default 1). |
+| `n` | number | no | How many variations (1-4 on the native path, up to 10 on the prompt path). |
+| `strategy` | one of: `auto` | `native` | `prompt` | no | How to make the variations. 'native' posts to GenBox's OpenAI /images/variations proxy; 'prompt' repaints candidates from the same source with mode=i2i, which works with any provider that can edit; 'auto' (default) tries native first and falls back to prompt when the gateway does not implement it. |
 | `outputDir` | string | no | Directory for the results. Defaults to the plugin outputDir config. |
 
 ## genbox_open_workbench

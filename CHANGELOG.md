@@ -9,6 +9,15 @@
   所以「下载到的视频」从未被真正解码验证过——之前的断言只查了「文件非空」。现在 mock 在启动时用 ffmpeg 生成
   真实的 2 秒片段（ffmpeg 不可用时回退到占位数据并写明原因）。这条是旅程测试抓出来的。
 - 修正 `genbox_video_edit` 的工具描述：原来只列了 11 种操作里的 6 种（对照自动生成的 `docs/tools.md` 发现）。
+- **超分（生成后放大）现在真的生效**：GenBox 用 `int(upscale_to)` 解析目标尺寸，传 `"1024x1024"`
+  会抛 `invalid literal for int()` 并**静默保留原图**（实测）。`genbox_image_generate` 现在有
+  `upscaleTo` / `upscaleMethod` / `upscaleRatio`，并把 `WxH` 归一化成 GenBox 唯一接受的**长边整数**；
+  实测 `upscaleTo: "1024x1024"` 产出 1024×1024 文件（`*_upscaled_1024x1024_orig.png`），此前是 512×512 原样返回。
+- **变体不再依赖网关实现遗留协议**：`genbox_image_variations` 新增 `strategy`（`auto`/`native`/`prompt`）。
+  native 走 GenBox 代理的 OpenAI 遗留 `/images/variations`，实测你的网关回 `400 Model name not specified`
+  （gpt-image 本身也没有 variants API）；`prompt` 用同一底图走 `mode=i2i` + `quantities` 生成 N 个候选，
+  任何能改图的 provider 都可用；`auto` 默认先试 native、失败自动降级。
+- 新增套件 `verify-image-extras.mjs`（8 项断言：放大归一化 + 两种变体策略 + auto 优先级）。
 - **局部重绘（inpaint）现在真的能跑通，并把怎么修写进报错里**：实测把 provider 的 `endpoint_type
   从 `auto` 改成 `openai` 后，用真实 `gpt-image`（`gpt-image-2-vip`）跑通了一次带掩膜的局部重绘：
   62.6s、1024×1024、1,168,239 B，白框内的纸灯笼被换成热气球，湖面与远山保持不变。

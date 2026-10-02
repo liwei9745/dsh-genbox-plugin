@@ -66,6 +66,7 @@ const suites = [
   { name: 'cutout failure surfacing', file: 'verify-cutout.mjs', needs: ['genbox'] },
   { name: 'background jobs', file: 'verify-background.mjs', needs: ['genbox', 'mock'] },
   { name: 'gallery + prompt', file: 'verify-media.mjs', needs: ['genbox'] },
+  { name: 'upscale + variation strategies', file: 'verify-image-extras.mjs', needs: ['genbox', 'mock'] },
   { name: 'gallery filters', file: 'verify-gallery-filters.mjs', needs: ['genbox', 'mock'] },
   { name: 'native job registry', file: 'verify-native-jobs.mjs', needs: ['genbox', 'mock'] },
   { name: 'precision annotations', file: 'verify-precision.mjs', needs: ['genbox', 'mock'] },
