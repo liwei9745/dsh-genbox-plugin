@@ -94,11 +94,20 @@ const hasLib = packedFiles.includes('lib/index.js')
 const hasPatch = packedFiles.includes('cordis.patch.yml')
 record('tarball contains lib/index.js + cordis.patch.yml', hasLib && hasPatch, packedFiles.join(', ') || pack.output)
 
+// A first release needs the name to be free; a later one only needs the exact
+// version to be unpublished (npm refuses to overwrite a version).
+const pkgVersion = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version
 const npmName = tryRun(NPM, ['view', NAME, 'version'])
+const publishedVersion = npmName.ok ? npmName.output.trim() : ''
+const versionTaken = npmName.ok && tryRun(NPM, ['view', NAME + '@' + pkgVersion, 'version']).ok
 record(
-  'npm name is still free',
-  !npmName.ok && !npmName.unusable,
-  npmName.ok ? ('taken: ' + npmName.output) : (npmName.unusable ? ('npm unusable: ' + npmName.output) : '404 as expected'),
+  'npm version ' + pkgVersion + ' is unpublished',
+  !versionTaken && !npmName.unusable,
+  npmName.unusable
+    ? ('npm unusable: ' + npmName.output)
+    : versionTaken
+      ? ('already published: ' + pkgVersion)
+      : (publishedVersion === '' ? 'new package name, nothing published yet' : 'next to the published ' + publishedVersion),
 )
 
 const requireGithub = process.argv.includes('--with-github')
