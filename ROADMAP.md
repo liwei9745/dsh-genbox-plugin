@@ -16,7 +16,8 @@
 | G1.5 可发现 | Discussions 发帖 + 教程博客 | 帖子链接与博客链接 | ⏳ 草稿已写好，等账号授权 |
 | G2 可协作 | issue 模板、贡献指南、CI 绿 | CI 在 PR 上跑通 typecheck+build | 🟡 CI 已写好，等仓库建立 |
 | G3 真跑 | 真实 provider 端到端 | 用真实 Key 生成一张图、一段视频并落盘 | ⏳ 需要你在 GenBox 配 Key |
-| G4 体验 | UI 卡片（`presentCall`/`presentResult`）、长视频走 `ctx.jobs` 后台任务 | 卡片在 Web 端渲染；视频任务返回 jobId | ⬜ 未开始 |
+| G4a 非阻塞 | 生图/生视频支持 `background: true` 立即返回 + `genbox_task` 查询/下载/取消 | `scripts/verify-background.mjs`：生图 85ms 返回、随后 settled + 文件落盘；视频同样通过 | ✅ 已完成 |
+| G4b 体验 | UI 卡片（`presentCall`/`presentResult`）、改用 DSH 原生 `ctx.jobs` 后台任务 | 卡片在 Web 端渲染；任务返回原生 jobId | ⬜ 未开始 |
 | G5 扩展 | ffmpeg 视频编辑（裁剪/拼接/变速/字幕）、精准改图批注、抠图 checkpoint 流程 | 各自的端到端脚本 | ⬜ 未开始 |
 | G6 复用 | 若出现第二个媒体后端，再抽 `dsh-media` Service Definition / Provider / Consumer 三层 | 第二个 provider 无需改工具层 | ⬜ 观察中 |
 

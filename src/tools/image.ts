@@ -38,6 +38,7 @@ type ImageFailure = {
 }
 
 type ImageBatch = {
+  background: boolean
   generationId: string
   status: string
   elapsedSeconds: number
@@ -78,11 +79,16 @@ async function runGeneration(
   body: Record<string, unknown>,
   outputDir: string,
   signal: AbortSignal | undefined,
+  background: boolean,
 ): Promise<ImageBatch> {
   const created = await client.json<{ generation_id?: string }>('POST', '/api/generate', body, signal)
   const generationId = created.generation_id
   if (generationId === undefined) {
     throw new Error('GenBox did not return a generation_id: ' + JSON.stringify(created))
+  }
+
+  if (background) {
+    return { background: true, generationId, status: 'queued', elapsedSeconds: 0, images: [], failures: [] }
   }
 
   const final = await client.waitFor<GenerateStatus>(
@@ -111,6 +117,7 @@ async function runGeneration(
     }
   }
   return {
+    background: false,
     generationId,
     status: final.status ?? 'unknown',
     elapsedSeconds: final.elapsed_seconds ?? 0,
@@ -120,6 +127,13 @@ async function runGeneration(
 }
 
 function renderBatch(headline: string, value: ImageBatch) {
+  if (value.background) {
+    return [{
+      type: 'text' as const,
+      text: headline + ' — submitted as generation ' + value.generationId
+        + '. It keeps running on the GenBox host; check it with genbox_task (kind="image").',
+    }]
+  }
   const lines = [headline + ' — ' + value.status + ' in ' + value.elapsedSeconds + 's (generation ' + value.generationId + ')']
   for (const image of value.images) {
     lines.push('- ' + image.providerId + ' [' + image.model + '] -> ' + image.file)
@@ -154,6 +168,10 @@ export function registerImageTools(ctx: Context, client: GenBoxClient, config: C
       count: { type: 'number', description: 'Images per provider (1-10). Defaults to 1.' },
       enhancePrompt: { type: 'boolean', description: 'Ask the configured LLM provider to rewrite the prompt first.' },
       outputDir: { type: 'string', description: 'Directory for the downloaded images. Defaults to the plugin outputDir config.' },
+      background: {
+        type: 'boolean',
+        description: 'Return as soon as GenBox accepts the job instead of waiting for the images. Poll with genbox_task.',
+      },
     },
     output: { schema: BATCH_SCHEMA, render: (_args, value) => renderBatch('genbox_image_generate', value as ImageBatch) },
     async execute(args, exec) {
@@ -181,6 +199,7 @@ export function registerImageTools(ctx: Context, client: GenBoxClient, config: C
         body,
         resolveOutputDir(config.outputDir, args.outputDir),
         exec.signal,
+        args.background === true,
       )
     },
   }))
@@ -204,6 +223,10 @@ export function registerImageTools(ctx: Context, client: GenBoxClient, config: C
       precisionTargetSize: { type: 'string', description: "precision_edit only: target canvas 'WIDTHxHEIGHT' required by resize mode." },
       precisionOutputSizePolicy: { type: 'string', enum: ['strict', 'fit_crop'], description: "precision_edit resize output policy; defaults to 'strict'." },
       outputDir: { type: 'string', description: 'Directory for the downloaded results. Defaults to the plugin outputDir config.' },
+      background: {
+        type: 'boolean',
+        description: 'Return as soon as GenBox accepts the job instead of waiting for the result. Poll with genbox_task.',
+      },
     },
     output: { schema: BATCH_SCHEMA, render: (_args, value) => renderBatch('genbox_image_edit', value as ImageBatch) },
     async execute(args, exec) {
@@ -248,6 +271,7 @@ export function registerImageTools(ctx: Context, client: GenBoxClient, config: C
         body,
         resolveOutputDir(config.outputDir, args.outputDir),
         exec.signal,
+        args.background === true,
       )
     },
   }))

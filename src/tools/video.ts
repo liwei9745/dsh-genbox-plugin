@@ -19,6 +19,7 @@ interface VideoStatus {
 }
 
 type VideoOutcome = {
+  background: boolean
   taskId: string
   status: string
   elapsedSeconds: number
@@ -56,11 +57,22 @@ export function registerVideoTools(ctx: Context, client: GenBoxClient, config: C
       negativePrompt: { type: 'string', description: 'What to avoid.' },
       seed: { type: 'number', description: 'Deterministic seed when the provider supports it.' },
       outputDir: { type: 'string', description: 'Directory for the downloaded clip. Defaults to the plugin outputDir config.' },
+      background: {
+        type: 'boolean',
+        description: 'Return as soon as GenBox accepts the job instead of waiting for the clip. Poll with genbox_task - recommended for videos.',
+      },
     },
     output: {
       schema: { type: 'object', additionalProperties: true },
       render: (_args, value) => {
         const result = value as unknown as VideoOutcome
+        if (result.background) {
+          return [{
+            type: 'text' as const,
+            text: 'genbox_video_generate — submitted as task ' + result.taskId
+              + '. It keeps running on the GenBox host; check it with genbox_task (kind="video").',
+          }]
+        }
         const lines = [
           'genbox_video_generate — ' + result.status + ' in ' + result.elapsedSeconds + 's (task ' + result.taskId + ')',
         ]
@@ -101,6 +113,10 @@ export function registerVideoTools(ctx: Context, client: GenBoxClient, config: C
         throw new Error('GenBox did not return a video task id: ' + JSON.stringify(created).slice(0, 300))
       }
 
+      if (args.background === true) {
+        return { background: true, taskId, status: 'queued', elapsedSeconds: 0 }
+      }
+
       const final = await client.waitFor<VideoStatus>(
         '/api/video/status/' + encodeURIComponent(taskId),
         (value) => TERMINAL_STATUSES.has(value.status ?? ''),
@@ -108,6 +124,7 @@ export function registerVideoTools(ctx: Context, client: GenBoxClient, config: C
       )
 
       const outcome: VideoOutcome = {
+        background: false,
         taskId,
         status: final.status ?? 'unknown',
         elapsedSeconds: final.elapsed_seconds ?? 0,

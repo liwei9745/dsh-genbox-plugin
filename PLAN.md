@@ -193,3 +193,15 @@ E:\AI\GenBox-dsh\
 **仍待用户参与的两件事**：
 1. 真实 provider 联调（需要 GenBox 侧配置 API Key；插件侧无需改动）。
 2. 装进 `desktop` profile 并用 DSH GUI 实机验证（需重启 DSH NEXT）。
+
+### 第 5 轮（新目标 G4a：非阻塞提交）
+
+- 给 `genbox_image_generate` / `genbox_image_edit` / `genbox_video_generate` 加了 `background: true`：提交后立刻返回 id，不再占着工具调用等几分钟。
+- 新增 `genbox_task`：按 id 查询状态、完成后下载结果、也可 `cancel: true` 取消。
+- 实测（[scripts/verify-background.mjs](scripts/verify-background.mjs)）：生图 **85ms** 返回 id → `genbox_task(kind=image)` settled `completed` 并落盘 1990B；视频同样 settled 并落盘 2080B mp4。`tsc --noEmit` 干净。
+
+**同轮发现的阻塞项（需要你处理）**：用 `dsh` CLI 跑真实会话时被认证挡住——
+`@
+dsh: AUTH: Authentication Fails, Your api key: ****ocal is invalid
+`@
+也就是说：**命令行 profile（包括我开的 3099 实验室）拿到的 API Key 是无效的**；而这个 Desktop 会话本身是正常的。因此"模型 → 工具调用"这一层的端到端验证在当前 CLI 凭据修好之前做不了。可选解法见 [ROADMAP.md](ROADMAP.md)：要么在 CLI 环境配一个有效 Key，要么把插件装进 `desktop` profile 后重启 DSH NEXT（Desktop 的凭据是好的）。

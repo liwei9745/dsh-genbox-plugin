@@ -74,6 +74,7 @@ dsh plugin --profile <profile> add github:<you>/GenBox-dsh
 | `genbox_image_variations` | 生成变体 |
 | `genbox_cutout` | 抠图（需要 GenBox 侧安装 checkpoint） |
 | `genbox_video_generate` | 文生视频 / 图生视频 / 首尾关键帧；改视频用 `i2vid` 或 `keyframes` 再生成 |
+| `genbox_task` | 查询/取消后台任务。生图/生视频都支持 `background: true` 立即返回，再用它收取结果 |
 | `genbox_gallery` | 媒体库检索并复制到本地 |
 | `genbox_prompt_optimize` | 提示词优化 |
 
@@ -112,3 +113,4 @@ node scripts/verify-tools.mjs   # 端到端（需 GenBox + mock provider 已启�
 
 插件 MIT。GenBox 为 GPL-3.0：本插件只通过 HTTP 调用其公开 API，不链接、不拷贝其源码。
 `upstream/GenBox` 仅作本地参考与联调，已被 gitignore。
+长任务建议用 `background: true` 提交（实测生图 85ms 返回），再让模型用 `genbox_task` 取结果；视频尤其如此。
