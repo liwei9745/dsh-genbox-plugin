@@ -11,7 +11,7 @@
 - 修正 `genbox_video_edit` 的工具描述：原来只列了 11 种操作里的 6 种（对照自动生成的 `docs/tools.md` 发现）。
 - **浏览器实测工具进仓**：`scripts/browser/measure-splitters.cjs`（自己发现 chromium，测两种视口），并作为
   `verify-all` 的套件 `browser: splitter trades space`（缺 Playwright 时 SKIP，不拖累 CI）。
-  实测：1920×1080 下 643+250=893 → 693+200=893 → 453+440=893；1280×800 下 363+250=613 → 413+200=613 → 180+433=613，
+  实测：1920×1080 下 643+250=893 → 683+210=893 → 443+450=893；1280×800 下 363+250=613 → 403+210=613 → 220+393=613，
   **总和恒定、相邻面板互换空间**。踩坑清单里原先指向 `.lab/`（被 gitignore，读者拿不到）的路径已修正。
 - **新增可复现的验证证据文件**：`docs/verification.md` 由 `node scripts/write-verification.mjs` 跑完
   `verify-all` 后生成，内嵌**该次运行的原始输出**（21 套件全过 + 1 项 opt-in 跳过），并附真实 provider 实测表与

@@ -107,6 +107,70 @@ async function checkViewport(browser, viewport) {
   return { viewport, base, down, up, grew, gave, shrank, took, ok }
 }
 
+/** The precision workbench's bottom bar must resize the canvas vertically only. */
+async function checkPrecisionCanvas(browser, viewport) {
+  const image = process.env.PROBE_IMAGE ?? newestPng()
+  if (image === undefined) {
+    return { skipped: 'no source image: set PROBE_IMAGE to a png on disk' }
+  }
+  const page = await browser.newPage({ viewport })
+  await page.goto(BASE + '/', { waitUntil: 'domcontentloaded' })
+  await page.waitForTimeout(3000)
+  await page.evaluate(() => {
+    if (typeof switchNav === 'function') switchNav('generate', document.getElementById('navGen'))
+    document.getElementById('panelPrecisionEdit')?.classList.remove('hidden')
+  })
+  await page.waitForTimeout(800)
+  await page.setInputFiles('#precisionFileInput', image).catch(() => {})
+  await page.waitForTimeout(2500)
+  await page.click('#btnPrecisionFullscreen').catch(() => {})
+  await page.waitForTimeout(1000)
+
+  const measure = () => page.evaluate(() => {
+    const rect = document.querySelector('#precisionCanvasShell')?.getBoundingClientRect()
+    const handle = document.querySelector('#precisionCanvasVerticalResizeHandle')?.getBoundingClientRect()
+    return {
+      shell: rect ? { w: Math.round(rect.width), h: Math.round(rect.height) } : null,
+      handle: handle ? { x: handle.left + handle.width / 2, y: handle.top + handle.height / 2, w: Math.round(handle.width) } : null,
+      fullscreen: document.fullscreenElement !== null,
+    }
+  })
+
+  const before = await measure()
+  if (before.shell === null || before.handle === null || before.handle.w === 0 || !before.fullscreen) {
+    await page.close()
+    return { skipped: 'the precision workbench did not expose a draggable vertical bar' }
+  }
+  await page.mouse.move(before.handle.x, before.handle.y)
+  await page.mouse.down()
+  for (let step = 1; step <= 12; step += 1) await page.mouse.move(before.handle.x, before.handle.y + step * 10)
+  await page.mouse.up()
+  await page.waitForTimeout(400)
+  const after = await measure()
+  await page.close()
+
+  const grew = after.shell.h - before.shell.h
+  const widened = after.shell.w - before.shell.w
+  return { before, after, grew, widened, ok: grew > 60 && Math.abs(widened) <= 2 }
+}
+
+/** The newest png under .genbox-out, when the suite has produced one. */
+function newestPng() {
+  const root = join(__dirname, '..', '..', '.genbox-out')
+  if (!existsSync(root)) return undefined
+  const found = []
+  const walk = (directory, depth) => {
+    if (depth > 3) return
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const full = join(directory, entry.name)
+      if (entry.isDirectory()) walk(full, depth + 1)
+      else if (entry.name.toLowerCase().endsWith('.png')) found.push(full)
+    }
+  }
+  walk(root, 0)
+  return found.sort().pop()
+}
+
 (async () => {
   const executablePath = findChromium()
   const browser = await chromium.launch({ headless: true, executablePath, args: ['--no-sandbox'] })
@@ -125,6 +189,16 @@ async function checkViewport(browser, viewport) {
       + ' splitter trades space (top +' + result.grew + ' / neighbour -' + result.gave
       + '; top -' + result.shrank + ' / neighbour +' + result.took + ')')
     if (!result.ok) failures += 1
+  }
+  const precision = await checkPrecisionCanvas(browser, VIEWPORTS[0])
+  if (precision.skipped) {
+    console.log('  [skip] precision canvas: ' + precision.skipped)
+  } else {
+    console.log('  precision canvas: ' + precision.before.shell.w + 'x' + precision.before.shell.h
+      + ' -> ' + precision.after.shell.w + 'x' + precision.after.shell.h)
+    console.log('  [' + (precision.ok ? 'ok' : 'FAIL') + '] precision canvas bottom bar grows the canvas downward (h +'
+      + precision.grew + ', w ' + precision.widened + ')')
+    if (!precision.ok) failures += 1
   }
   await browser.close()
   console.log(failures === 0 ? 'OK' : 'FAILURES: ' + failures)

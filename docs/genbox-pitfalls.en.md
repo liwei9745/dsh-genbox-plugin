@@ -37,7 +37,11 @@ finds a chromium by itself (Playwright has to be resolvable - point `NODE_PATH` 
 existing install if needed) and checks the splitter at two viewport sizes:
 
 ```
-1920x1080: baseline 643+250=893 | +120 -> 693+200=893 | -240 -> 453+440=893
-1280x800 : baseline 363+250=613 | +120 -> 413+200=613 | -240 -> 180+433=613
+1920x1080: baseline 643+250=893 | +120 -> 683+210=893 | -240 -> 443+450=893
+1280x800 : baseline 363+250=613 | +120 -> 403+210=613 | -240 -> 220+393=613
 OK
 ```
+
+That last line is the automated counterpart of item 7: the precision workbench's bottom bar
+changes the height only (h +120, w 0). It needs a local image - pass `PROBE_IMAGE=<png>` or let
+it pick the newest png under `.genbox-out`.
