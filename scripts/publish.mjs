@@ -20,6 +20,10 @@ const execute = process.argv.includes('--execute')
 const NPM = process.platform === 'win32' ? 'npm.cmd' : 'npm'
 const GH_TOKEN = process.env.GH_TOKEN ?? process.env.GITHUB_TOKEN ?? ''
 const NPM_TOKEN = process.env.NPM_TOKEN ?? ''
+// Accounts with 2FA enabled must publish with a one-time code unless the token is a
+// granular access token that is explicitly allowed to bypass 2FA.
+const NPM_OTP = process.env.NPM_OTP ?? ''
+const otpArgs = NPM_OTP !== '' ? ['--otp=' + NPM_OTP] : []
 
 function quote(arg) {
   const value = String(arg)
@@ -110,7 +114,7 @@ console.log('== plan ==')
 console.log('  1. npm pack                                    (verify the tarball again)')
 console.log(githubReady ? '  2. create ' + NAME + ' on GitHub, push the current branch' : '  2. (GitHub steps skipped - npm only)')
 if (githubReady) console.log('  3. add topics: ' + TOPICS.join(', '))
-console.log('  4. npm publish --access public')
+console.log('  4. npm publish --access public' + (NPM_OTP !== '' ? ' --otp=<from $NPM_OTP>' : (NPM_TOKEN !== '' ? ' (with $NPM_TOKEN)' : '')))
 console.log('  5. verify with npm view ' + NAME + ' version and the repository page')
 console.log('')
 console.log('  posts to write by hand afterwards:')
@@ -179,12 +183,12 @@ if (NPM_TOKEN !== '') {
   const rcFile = join(tmpdir(), 'dsh-publish-npmrc-' + Date.now())
   writeFileSync(rcFile, '//registry.npmjs.org/:_authToken=' + NPM_TOKEN + '\n', { encoding: 'utf8', mode: 0o600 })
   try {
-    run(NPM, ['publish', '--access', 'public', '--userconfig', rcFile])
+    run(NPM, ['publish', '--access', 'public', '--userconfig', rcFile, ...otpArgs])
   } finally {
     rmSync(rcFile, { force: true })
   }
 } else {
-  run(NPM, ['publish', '--access', 'public'])
+  run(NPM, ['publish', '--access', 'public', ...otpArgs])
 }
 
 console.log('')
