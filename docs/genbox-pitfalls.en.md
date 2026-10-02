@@ -48,6 +48,21 @@ That last line is the automated counterpart of item 7: the precision workbench's
 changes the height only (h +120, w 0). It needs a local image - pass `PROBE_IMAGE=<png>` or let
 it pick the newest png under `.genbox-out`.
 
+### What the harness covers now (all with real pointer sequences)
+
+| # | Check | Assertion |
+|---|---|---|
+| 1 | Generate page vertical splitter (1920x1080 / 1280x800) | the panes trade space with a constant total; hit-tested first, skipped when unreachable |
+| 2 | Generate page left splitter | left column +120 / preview -120 (real drag) |
+| 3 | Precision canvas corner grip | **reachability**: `elementFromPoint(centre)` must return the grip |
+| 4 | Precision canvas bottom bar | height only (h +120, w 0) |
+
+Item 1 is skipped (not failed) at 768x900, where the bar is not laid out.
+
+**Audit note:** the left splitter is healthy (hit test returns `div#resizeLeft` and the drag works),
+and the creation-tools rail is a **click-to-collapse toggle**, not a drag splitter, so it has no
+equivalent problem.
+
 ## 9. The canvas corner grip was swallowed by the status bar (**fixed**)
 
 **Symptom:** with a tall canvas and a short viewport the 44x44 `nwse` grip at the canvas's

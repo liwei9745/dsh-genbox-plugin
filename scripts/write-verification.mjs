@@ -67,6 +67,8 @@ const doc = [
   '| 精准画布右下角抓点（纵向拖动） | 被忽略（只读 `dx`） | 按主导轴生效：向下 400 → 440、向上 400 → 360 |',
   '| 精准画布底部竖条（纵向拖动） | — | 1013x626 → 1013x746（h +120、w 0，只改高度） |',
   '| 精准画布右下角抓点可达性 | 命中 `div.status-bar`（画布钻到状态栏下面） | 命中 `button#precisionCanvasResizeHandle`；画布上限 760 → 733，抓点下沿 1049 vs 状态栏顶 1050 |',
+  '| 生成页纵向分隔条可达性 | 中心/抓手标记落在 `overflow: auto` 裁剪死区，仅顶沿约 4px 可点 | 移到面板内（`bottom: 0`），真实指针拖拽生效 |',
+  '| 生成页左侧分隔条 | — | 真实指针：左栏 240 → 360、预览 1256 → 1136（健康） |',
   '',
   '上面两条由 `scripts/browser/measure-splitters.cjs` 复现（自己找 chromium；Playwright 需可解析），',
   '它同时是 `verify-all` 里名为 `browser: splitter trades space` 的套件。',

@@ -143,6 +143,50 @@ async function checkViewport(browser, viewport) {
   return { viewport, base, down, up, grew, gave, shrank, took, ok }
 }
 
+/**
+ * The horizontal splitter between the left column and the preview must be grabbable where
+ * its grip mark is drawn, and a real drag must move both panes by the same amount.
+ */
+async function checkLeftSplitter(page) {
+  const grab = await page.evaluate(() => {
+    const handle = document.getElementById('resizeLeft')
+    if (handle === null) return null
+    const rect = handle.getBoundingClientRect()
+    // The mark is drawn at left: 10px inside the 12px bar.
+    const x = rect.left + Math.min(10, rect.width - 2)
+    const y = rect.top + rect.height / 2
+    const at = document.elementFromPoint(Math.round(x), Math.round(y))
+    const hit = at === handle || (at !== null && handle.contains(at))
+    return { x, y, hit, blocker: hit ? null : (at === null ? '(nothing)' : at.tagName.toLowerCase() + (at.id ? '#' + at.id : '')) }
+  })
+  if (grab === null) return { skipped: 'the left splitter is not in the DOM' }
+  if (!grab.hit) return { skipped: 'the left splitter is covered by ' + grab.blocker }
+
+  const before = await page.evaluate(() => {
+    const left = document.querySelector('.generate-left').getBoundingClientRect()
+    const preview = document.getElementById('previewPanel').getBoundingClientRect()
+    return { left: Math.round(left.width), previewX: Math.round(preview.x), previewW: Math.round(preview.width) }
+  })
+  await page.mouse.move(grab.x, grab.y)
+  await page.mouse.down()
+  for (let step = 1; step <= 8; step += 1) await page.mouse.move(grab.x + step * 15, grab.y)
+  await page.mouse.up()
+  await page.waitForTimeout(200)
+  const after = await page.evaluate(() => {
+    const left = document.querySelector('.generate-left').getBoundingClientRect()
+    const preview = document.getElementById('previewPanel').getBoundingClientRect()
+    return { left: Math.round(left.width), previewX: Math.round(preview.x), previewW: Math.round(preview.width) }
+  })
+
+  const grew = after.left - before.left
+  const gave = before.previewW - after.previewW
+  const shifted = after.previewX - before.previewX
+  return {
+    before, after, grew, gave, shifted,
+    ok: grew > 60 && Math.abs(grew - gave) <= 2 && Math.abs(shifted - grew) <= 2,
+  }
+}
+
 /** The precision workbench's bottom bar must resize the canvas vertically only. */
 async function checkPrecisionCanvas(browser, viewport) {
   const image = process.env.PROBE_IMAGE ?? newestPng()
@@ -329,6 +373,26 @@ function newestPng() {
       + ' a real pointer drag trades space (top +' + result.grew + ' / neighbour -' + result.gave + ')')
     if (!result.ok) failures += 1
   }
+  // The horizontal splitter lives on the generate page, so measure it once there.
+  const leftPage = await browser.newPage({ viewport: VIEWPORTS[0] })
+  await leftPage.goto(BASE + '/', { waitUntil: 'domcontentloaded' })
+  await leftPage.waitForTimeout(3000)
+  await leftPage.evaluate(() => {
+    if (typeof switchNav === 'function') switchNav('generate', document.getElementById('navGen'))
+  })
+  await leftPage.waitForTimeout(1800)
+  const left = await checkLeftSplitter(leftPage)
+  await leftPage.close()
+  if (left.skipped) {
+    console.log('  [skip] left splitter: ' + left.skipped)
+  } else {
+    console.log('  left splitter: left column ' + left.before.left + ' -> ' + left.after.left
+      + ', preview ' + left.before.previewW + ' -> ' + left.after.previewW)
+    console.log('  [' + (left.ok ? 'ok' : 'FAIL') + '] left splitter trades space with its neighbour'
+      + ' (left +' + left.grew + ' / preview -' + left.gave + ')')
+    if (!left.ok) failures += 1
+  }
+
   const grip = await checkPrecisionGrip(browser, VIEWPORTS[0])
   if (grip.skipped) {
     console.log('  [skip] precision corner grip: ' + grip.skipped)
