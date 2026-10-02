@@ -32,6 +32,7 @@ const suites = [
   { name: 'background jobs', file: 'verify-background.mjs', needs: ['genbox'] },
   { name: 'gallery + prompt', file: 'verify-media.mjs', needs: ['genbox'] },
   { name: 'gallery filters', file: 'verify-gallery-filters.mjs', needs: ['genbox'] },
+  { name: 'native job registry', file: 'verify-native-jobs.mjs', needs: ['genbox'] },
   { name: 'precision annotations', file: 'verify-precision.mjs', needs: ['genbox'] },
 ]
 

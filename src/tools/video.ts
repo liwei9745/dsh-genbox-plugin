@@ -18,9 +18,27 @@ interface VideoStatus {
   error?: string | null
 }
 
+interface NativeJobStartSpec {
+  kind: string
+  label: string
+  owner?: string
+  run: () => { done: Promise<unknown>; cancel: (reason: string) => void }
+}
+
+interface NativeJobsRegistry {
+  start(spec: NativeJobStartSpec): string
+}
+
+/** The DSH job registry, when the composed host provides one. */
+function nativeJobsRegistry(ctx: Context): NativeJobsRegistry | undefined {
+  const candidate = (ctx as unknown as { jobs?: NativeJobsRegistry }).jobs
+  return candidate !== undefined && typeof candidate.start === 'function' ? candidate : undefined
+}
+
 type VideoOutcome = {
   background: boolean
   taskId: string
+  jobId?: string
   status: string
   elapsedSeconds: number
   file?: string
@@ -67,10 +85,12 @@ export function registerVideoTools(ctx: Context, client: GenBoxClient, config: C
       render: (_args, value) => {
         const result = value as unknown as VideoOutcome
         if (result.background) {
+          const hint = result.jobId !== undefined
+            ? 'It is registered as DSH job ' + result.jobId + ' (use job_output / job_kill).'
+            : 'It keeps running on the GenBox host; check it with genbox_task (kind="video").'
           return [{
             type: 'text' as const,
-            text: 'genbox_video_generate — submitted as task ' + result.taskId
-              + '. It keeps running on the GenBox host; check it with genbox_task (kind="video").',
+            text: 'genbox_video_generate — submitted as task ' + result.taskId + '. ' + hint,
           }]
         }
         const lines = [
@@ -113,33 +133,58 @@ export function registerVideoTools(ctx: Context, client: GenBoxClient, config: C
         throw new Error('GenBox did not return a video task id: ' + JSON.stringify(created).slice(0, 300))
       }
 
+      const directory = resolveOutputDir(config.outputDir, args.outputDir)
+
+      /** Poll the task to its terminal state and fetch the finished clip. */
+      const settle = async (signal: AbortSignal | undefined): Promise<VideoOutcome> => {
+        const final = await client.waitFor<VideoStatus>(
+          '/api/video/status/' + encodeURIComponent(taskId),
+          (value) => TERMINAL_STATUSES.has(value.status ?? ''),
+          { intervalMs: Math.max(config.pollIntervalMs, 5000), timeoutMs: config.taskTimeoutMs, signal },
+        )
+        const outcome: VideoOutcome = {
+          background: false,
+          taskId,
+          status: final.status ?? 'unknown',
+          elapsedSeconds: final.elapsed_seconds ?? 0,
+        }
+        if (typeof final.error === 'string' && final.error !== '') outcome.error = final.error
+        const localPath = final.local_path
+        if (typeof localPath === 'string' && localPath !== '') {
+          const file = outputPath(directory, basename(localPath))
+          await client.download('/api/video/file/' + encodeURIComponent(basename(localPath)), file, signal)
+          outcome.file = file
+        } else if (typeof final.video_url === 'string' && final.video_url !== '') {
+          outcome.videoUrl = final.video_url
+        }
+        return outcome
+      }
+
       if (args.background === true) {
+        const registry = config.nativeJobs ? nativeJobsRegistry(ctx) : undefined
+        if (registry !== undefined) {
+          // Hand the waiting to the DSH job registry so it outlives this tool call.
+          // The job deliberately ignores exec.signal: the call is over already.
+          const owner = (exec as unknown as { agent?: { id?: string } }).agent?.id
+          const jobId = registry.start({
+            kind: 'genbox-video',
+            label: args.prompt.slice(0, 80),
+            ...(owner !== undefined ? { owner } : {}),
+            run: () => ({
+              done: settle(undefined),
+              cancel: () => {
+                void client
+                  .json('POST', '/api/video/cancel/' + encodeURIComponent(taskId), undefined, exec.signal)
+                  .catch(() => undefined)
+              },
+            }),
+          })
+          return { background: true, taskId, jobId, status: 'queued', elapsedSeconds: 0 }
+        }
         return { background: true, taskId, status: 'queued', elapsedSeconds: 0 }
       }
 
-      const final = await client.waitFor<VideoStatus>(
-        '/api/video/status/' + encodeURIComponent(taskId),
-        (value) => TERMINAL_STATUSES.has(value.status ?? ''),
-        { intervalMs: Math.max(config.pollIntervalMs, 5000), timeoutMs: config.taskTimeoutMs, signal: exec.signal },
-      )
-
-      const outcome: VideoOutcome = {
-        background: false,
-        taskId,
-        status: final.status ?? 'unknown',
-        elapsedSeconds: final.elapsed_seconds ?? 0,
-      }
-      if (typeof final.error === 'string' && final.error !== '') outcome.error = final.error
-
-      const localPath = final.local_path
-      if (typeof localPath === 'string' && localPath !== '') {
-        const file = outputPath(resolveOutputDir(config.outputDir, args.outputDir), basename(localPath))
-        await client.download('/api/video/file/' + encodeURIComponent(basename(localPath)), file, exec.signal)
-        outcome.file = file
-      } else if (typeof final.video_url === 'string' && final.video_url !== '') {
-        outcome.videoUrl = final.video_url
-      }
-      return outcome
+      return await settle(exec.signal)
     },
   }))
 }

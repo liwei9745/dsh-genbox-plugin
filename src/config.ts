@@ -20,6 +20,8 @@ export interface Config {
   ffprobePath: string
   /** Force an ffmpeg video encoder ('' = auto-detect from libx264/h264_mf/libopenh264/mpeg4). */
   videoEncoder: string
+  /** Experimental: hand background video jobs to the DSH job registry (ctx.jobs) instead of plain polling. */
+  nativeJobs: boolean
 }
 
 export const Config: Schema<Config> = Schema.object({
@@ -32,4 +34,5 @@ export const Config: Schema<Config> = Schema.object({
   ffmpegPath: Schema.string().default('ffmpeg'),
   ffprobePath: Schema.string().default('ffprobe'),
   videoEncoder: Schema.string().default(''),
+  nativeJobs: Schema.boolean().default(false),
 })

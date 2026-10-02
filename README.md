@@ -115,6 +115,7 @@ DSH 内置的 `read_image` 看图。
 | `ffmpegPath` | `ffmpeg` | 本地视频编辑用的 ffmpeg |
 | `ffprobePath` | `ffprobe` | 媒体探测用的 ffprobe |
 | `videoEncoder` | 空（自动） | 强制视频编码器；空则按 libx264 → h264_mf → libopenh264 → mpeg4 自动选 |
+| `nativeJobs` | false | 实验性：后台视频任务交给 DSH 的 `ctx.jobs`，见 [docs/native-jobs.md](./docs/native-jobs.md) |
 
 ## 开发
 

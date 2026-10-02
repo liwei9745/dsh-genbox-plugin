@@ -76,9 +76,16 @@ record(
   npmName.ok ? ('taken: ' + npmName.output) : (npmName.unusable ? ('npm unusable: ' + npmName.output) : '404 as expected'),
 )
 
+const requireGithub = process.argv.includes('--with-github')
 const ghVersion = tryRun('gh', ['--version'])
 const ghMode = ghVersion.ok ? 'gh CLI' : (GH_TOKEN !== '' ? 'GH_TOKEN' : '')
-record('GitHub credentials', ghMode !== '', ghMode === '' ? 'run: gh auth login, or set GH_TOKEN' : ('via ' + ghMode))
+const githubReady = ghMode !== ''
+if (requireGithub) {
+  record('GitHub credentials', githubReady, githubReady ? ('via ' + ghMode) : 'run: gh auth login, or set GH_TOKEN')
+} else if (!githubReady) {
+  console.log('  [skip] GitHub steps skipped: no gh CLI and no GH_TOKEN.')
+  console.log('         pass --with-github (after gh auth login / GH_TOKEN) to create the repository and topics.')
+}
 
 if (ghVersion.ok) {
   const ghAuth = tryRun('gh', ['auth', 'status'])
@@ -101,8 +108,8 @@ const blockers = checks.filter((check) => !check.ok)
 console.log('')
 console.log('== plan ==')
 console.log('  1. npm pack                                    (verify the tarball again)')
-console.log('  2. create ' + NAME + ' on GitHub, push the current branch')
-console.log('  3. add topics: ' + TOPICS.join(', '))
+console.log(githubReady ? '  2. create ' + NAME + ' on GitHub, push the current branch' : '  2. (GitHub steps skipped - npm only)')
+if (githubReady) console.log('  3. add topics: ' + TOPICS.join(', '))
 console.log('  4. npm publish --access public')
 console.log('  5. verify with npm view ' + NAME + ' version and the repository page')
 console.log('')
@@ -158,7 +165,9 @@ async function releaseWithToken(token) {
 
 console.log('')
 let owner = ''
-if (GH_TOKEN !== '') {
+if (!githubReady) {
+  console.log('skipping GitHub: no credentials in this shell. Publish to npm now, then re-run with --with-github to create the repository.')
+} else if (GH_TOKEN !== '') {
   owner = await releaseWithToken(GH_TOKEN)
   console.log('repository ready: https://github.com/' + owner + '/' + NAME)
 } else {

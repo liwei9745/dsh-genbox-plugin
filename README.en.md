@@ -97,6 +97,7 @@ the built-in `read_image` tool.
 | `taskTimeoutMs` | 900000 | per-task deadline |
 | `ffmpegPath` / `ffprobePath` | `ffmpeg` / `ffprobe` | binaries used by `genbox_video_edit` |
 | `videoEncoder` | empty (auto) | force an encoder, otherwise libx264 -> h264_mf -> libopenh264 -> mpeg4 |
+| `nativeJobs` | false | experimental: hand background video jobs to DSH `ctx.jobs`, see [docs/native-jobs.md](./docs/native-jobs.md) |
 
 ## Development
 
