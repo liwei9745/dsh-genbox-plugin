@@ -52,6 +52,33 @@ const inpaint = await tool('genbox_image_edit').execute(
 check('inpaint: a mask run completes and produces a file', inpaint.status === 'completed' && present(inpaint.images?.[0]?.file))
 console.log('inpaint ->', JSON.stringify(inpaint).slice(0, 160))
 
+// i2i with extra references: GenBox takes them as image_data_list (base first).
+const second = await tool('genbox_image_generate').execute(
+  { prompt: 'a second reference: a paper boat on the water', providers: ['mock-openai'], size: '512x512' },
+  exec,
+)
+const secondSource = second.images?.[0]?.file
+check('fixture: a second reference image exists', present(secondSource))
+const blended = await tool('genbox_image_edit').execute(
+  { prompt: 'blend both references into one scene', image: source, referenceImages: [secondSource], providers: ['mock-openai'], mode: 'i2i', size: '512x512' },
+  exec,
+)
+check('i2i: extra references complete and produce a new file', blended.status === 'completed' && present(blended.images?.[0]?.file) && blended.images?.[0]?.file !== source)
+console.log('i2i with references ->', JSON.stringify(blended).slice(0, 160))
+
+// The same parameter on a mode GenBox would reject has to fail with our own words.
+let referenceRefusal = ''
+try {
+  await tool('genbox_image_edit').execute(
+    { prompt: 'x', image: source, referenceImages: [secondSource], providers: ['mock-openai'], mode: 'inpaint', mask },
+    exec,
+  )
+} catch (error) {
+  referenceRefusal = error.message
+}
+check('referenceImages outside i2i is refused with a clear reason', /only for mode=i2i/i.test(referenceRefusal))
+console.log('referenceImages on inpaint ->', referenceRefusal.slice(0, 140))
+
 // precision_edit without a model: our own, specific refusal
 let modelRefusal = ''
 try {

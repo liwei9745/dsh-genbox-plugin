@@ -33,6 +33,15 @@ function installedProfile() {
   return existsSync(join(profile, 'node_modules', 'dsh-genbox-plugin', 'lib', 'index.js')) ? profile : undefined
 }
 
+/** Is a zero-cost mock provider enabled? Generation suites must not spend a real key. */
+async function mockUp() {
+  try {
+    const response = await fetch(GENBOX + '/api/providers', { signal: AbortSignal.timeout(2500) })
+    const body = await response.json()
+    return (body?.providers ?? []).some((provider) => provider.enabled === true && String(provider.id).startsWith('mock'))
+  } catch { return false }
+}
+
 function ffmpegUp() {
   try {
     const probe = spawnSync(process.env.FFMPEG_PATH ?? 'ffmpeg', ['-version'], { encoding: 'utf8' })
@@ -52,20 +61,21 @@ const suites = [
   { name: 'annotation overlay', file: 'verify-annotate.mjs', needs: [] },
   { name: 'local video editing', file: 'verify-video-edit.mjs', needs: ['ffmpeg'] },
   { name: 'doctor self-check', file: 'verify-doctor.mjs', needs: ['genbox'] },
-  { name: 'image + video tools', file: 'verify-tools.mjs', needs: ['genbox'] },
-  { name: 'edit modes (inpaint + precision)', file: 'verify-edit-modes.mjs', needs: ['genbox'] },
+  { name: 'image + video tools', file: 'verify-tools.mjs', needs: ['genbox', 'mock'] },
+  { name: 'edit modes (inpaint + precision)', file: 'verify-edit-modes.mjs', needs: ['genbox', 'mock'] },
   { name: 'cutout failure surfacing', file: 'verify-cutout.mjs', needs: ['genbox'] },
-  { name: 'background jobs', file: 'verify-background.mjs', needs: ['genbox'] },
+  { name: 'background jobs', file: 'verify-background.mjs', needs: ['genbox', 'mock'] },
   { name: 'gallery + prompt', file: 'verify-media.mjs', needs: ['genbox'] },
-  { name: 'gallery filters', file: 'verify-gallery-filters.mjs', needs: ['genbox'] },
-  { name: 'native job registry', file: 'verify-native-jobs.mjs', needs: ['genbox'] },
-  { name: 'precision annotations', file: 'verify-precision.mjs', needs: ['genbox'] },
-  { name: 'user journey (generate → edit → video → cut)', file: 'verify-journey.mjs', needs: ['genbox', 'ffmpeg'] },
+  { name: 'gallery filters', file: 'verify-gallery-filters.mjs', needs: ['genbox', 'mock'] },
+  { name: 'native job registry', file: 'verify-native-jobs.mjs', needs: ['genbox', 'mock'] },
+  { name: 'precision annotations', file: 'verify-precision.mjs', needs: ['genbox', 'mock'] },
+  { name: 'user journey (generate → edit → video → cut)', file: 'verify-journey.mjs', needs: ['genbox', 'ffmpeg', 'mock'] },
   { name: 'real provider (spends a key)', file: 'verify-real-provider.mjs', needs: ['realprovider'] },
 ]
 
 const hasGenbox = await genboxUp()
 const hasFfmpeg = ffmpegUp()
+const hasMock = hasGenbox ? await mockUp() : false
 const hasMarket = marketApp() !== undefined
 const hasInstalled = installedProfile() !== undefined
 // Opt-in: only a live key makes this suite meaningful, and it costs money.
@@ -73,6 +83,7 @@ const hasRealProvider = typeof process.env.GENBOX_REAL_PROVIDER === 'string' && 
 console.log(
   'prerequisites: genbox=' + (hasGenbox ? 'up' : 'down')
   + ' ffmpeg=' + (hasFfmpeg ? 'ok' : 'missing')
+  + ' mock-provider=' + (hasMock ? 'ok' : 'missing')
   + ' market=' + (hasMarket ? 'ok' : 'missing')
   + ' installed=' + (hasInstalled ? 'ok' : 'set DSH_PROFILE_DIR')
   + ' real-provider=' + (hasRealProvider ? 'ok' : 'off (set GENBOX_REAL_PROVIDER)'),
@@ -82,6 +93,7 @@ const results = []
 for (const suite of suites) {
   const missing = suite.needs.filter((need) => (need === 'genbox' && !hasGenbox)
     || (need === 'ffmpeg' && !hasFfmpeg)
+    || (need === 'mock' && !hasMock)
     || (need === 'market' && !hasMarket)
     || (need === 'installed' && !hasInstalled)
     || (need === 'realprovider' && !hasRealProvider))

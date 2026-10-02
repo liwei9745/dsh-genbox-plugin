@@ -53,10 +53,21 @@ step('doctor ok, ' + report.checks.length + ' checks, ' + report.nextSteps.lengt
 const providers = await tool('genbox_providers').execute({ enabledOnly: true }, exec)
 const allProviders = providers.providers ?? []
 const ofType = (type) => allProviders.filter((provider) => provider.enabled === true && (provider.type ?? 'image') === type)
-const preferMock = (list) => list.find((provider) => String(provider.id).startsWith('mock')) ?? list[0]
+// Strictly the zero-cost mock: falling back to a real provider would spend a key
+// every time this suite runs. verify-real-provider.mjs is the only place that
+// deliberately spends one.
+const preferMock = (list) => list.find((provider) => String(provider.id).startsWith('mock'))
+const skipUnlessMock = (provider, what) => {
+  if (provider !== undefined) return
+  console.log('SKIP no enabled mock ' + what + ' provider: enable mock-openai / mock-video in GenBox '
+    + '(docs/local-dev.md section 4). This suite never spends a real key; use verify-real-provider.mjs for that.')
+  process.exit(0)
+}
 const canPrecise = (provider) => provider.capabilities?.precision_edit === true
   || provider.modelCapabilities?.[provider.model]?.precision_edit === true
 
+skipUnlessMock(preferMock(ofType('image')), 'image')
+skipUnlessMock(preferMock(ofType('video')), 'video')
 const imageProvider = preferMock(ofType('image'))
 const precisionProvider = preferMock(ofType('image').filter(canPrecise))
 const videoProvider = preferMock(ofType('video'))

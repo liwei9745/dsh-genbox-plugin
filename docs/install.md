@@ -119,6 +119,25 @@ GenBox 的局部重绘要求 provider **同时**满足两点：声明 `capabilit
 且 `endpoint_type = openai`。只满足一条也会被拒——实测 `gpt-image` 声明了 mask，但 `endpoint_type=auto`，
 一样报这个错。被拒时插件会直接列出**当前满足全部条件**的 provider；`genbox_providers` 也能看到每个 provider 的 `endpointType`。
 
+**这类拒绝是可修的，而且我们实测修通过**：
+
+1. 在 GenBox → 设置 → 该 provider 里，把 `endpoint_type` 从 `auto` 改成 `openai`（只有一个字段）；
+2. 命令行改也可以：编辑 `storage/providers.json` 里该条的 `endpoint_type`，然后
+   `curl -X POST http://127.0.0.1:8892/api/providers/reload`；
+3. 之后再用同样的 `image` + `mask` 调 `genbox_image_edit`（`mode: "inpaint"`）即可。
+
+实测记录（`gpt-image` / `gpt-image-2-vip`，1024×1024 底图 + 白框掩膜）：
+
+```
+status: completed | took 62.6s
+file: .genbox-out/real-inpaint/gpt-image_20261002_231748_inpaint_replace_the_marked_pap_b06078.png
+     1024x1024, 1,168,239 B —— 白框内的纸灯笼被换成热气球，湖面/远山/天空保持不变
+```
+
+> 为什么 `auto` 会被拒？因为 GenBox 的校验是**声明式**的静态门禁（`main.py:1504-1510`），
+> 即使 `auto` 在运行时本来就会解析成 openai 协议（生成状态里的 `request_contract.protocol` 会显示
+> `openai`），它也不认。所以翻这个字段是行为中性的，只是把"隐含的 openai"变成"明示的 openai"。
+
 ### 5) `precision_edit_provider_unsupported`
 
 GenBox 要求该 provider 的 `capabilities.precision_edit = true`（模型需是它认可的改图模型）。

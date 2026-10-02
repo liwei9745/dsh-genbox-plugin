@@ -33,10 +33,27 @@ async function explainProviderUnsupported(
         // the 'auto' transport does not qualify, even when it declares the mask.
         && (mode !== 'inpaint' || provider.endpoint_type === 'openai'))
       .map((provider) => provider.id)
+    // GenBox refuses the mode outright when a provider declares the capability but
+    // runs on another transport. Naming that provider plus the one field to change
+    // turns a dead end into a fix - measured against a live gpt-image provider, where
+    // endpoint_type=auto -> openai was the whole difference.
+    const fixable = mode === 'inpaint'
+      ? providers.filter((provider) => provider.enabled === true
+        && provider.capabilities?.inpaint_mask === true
+        && provider.endpoint_type !== 'openai')
+        .map((provider) => provider.id)
+      : []
     const condition = mode === 'inpaint' ? 'inpaint_mask and endpoint_type=openai' : capability
-    return new Error(message + (capable.length > 0
+    const fixHint = fixable.length > 0
+      ? ' ' + fixable.join(', ') + (fixable.length === 1 ? ' declares ' : ' declare ') + capability
+        + (fixable.length === 1 ? ' but runs on' : ' but run on') + ' a non-openai transport, which GenBox refuses'
+        + ' for this mode; setting endpoint_type=openai on ' + (fixable.length === 1 ? 'that provider' : 'those providers')
+        + ' unlocks it.'
+      : ''
+    const capableHint = capable.length > 0
       ? ' Enabled providers with ' + condition + ': ' + capable.join(', ') + '.'
-      : ' No enabled provider has ' + condition + '; adjust one in GenBox, or use another mode (see genbox_providers).'))
+      : ' No enabled provider currently qualifies.'
+    return new Error(message + fixHint + capableHint)
   } catch {
     return error
   }
@@ -290,6 +307,12 @@ export function registerImageTools(ctx: Context, client: GenBoxClient, config: C
       image: { type: 'string', required: true, description: 'Source image: a local png/jpeg/webp path or a data URL.' },
       mode: { type: 'string', enum: ['i2i', 'inpaint', 'precision_edit'], description: "Editing mode; defaults to 'i2i'." },
       mask: { type: 'string', description: 'Required for inpaint: png/webp mask path or data URL, same size as the source. White is edited.' },
+      referenceImages: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'i2i only: extra reference images (local paths or data URLs) to blend with "image", which stays the first/base one. '
+          + 'GenBox receives them as image_data_list and requires its first entry to equal the base image.',
+      },
       providers: { type: 'array', items: { type: 'string' }, description: 'Provider ids to use. Defaults to every enabled image provider.' },
       model: { type: 'string', description: 'Model id to request. Must belong to the selected provider.' },
       size: { type: 'string', description: "Target canvas for i2i/inpaint, such as '1024x1024'." },
@@ -361,11 +384,25 @@ export function registerImageTools(ctx: Context, client: GenBoxClient, config: C
       if (args.providers !== undefined && args.providers.length > 0) body.providers = args.providers
       const settings = providerSettings(targets, args.model)
       if (Object.keys(settings).length > 0) body.provider_settings = settings
-      body.image_data = await toImageData(args.image)
+      if (mode !== 'i2i' && (args.referenceImages ?? []).some((value) => value.trim() !== '')) {
+        throw new Error('referenceImages is only for mode=i2i: GenBox takes extra references through image_data_list, '
+          + 'which inpaint (single image + mask) and precision_edit (single canvas) reject.')
+      }
+      if (mode !== 'i2i') body.image_data = await toImageData(args.image)
 
       if (mode === 'i2i') {
         if (args.size !== undefined && args.size !== '') body.size = args.size
         if (typeof args.strength === 'number') body.strength = args.strength
+        const extra = (args.referenceImages ?? []).filter((value) => value.trim() !== '')
+        if (extra.length > 0) {
+          // GenBox validates that image_data_list[0] equals image_data, so the base
+          // image leads the list.
+          const list = await Promise.all([args.image, ...extra].map((value) => toImageData(value)))
+          body.image_data = list[0]
+          body.image_data_list = list
+        } else {
+          body.image_data = await toImageData(args.image)
+        }
       } else if (mode === 'inpaint') {
         if (args.mask === undefined || args.mask.trim() === '') {
           throw new Error('mode=inpaint requires a mask image path or data URL.')

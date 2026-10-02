@@ -126,6 +126,27 @@ GenBox requires **both** `capabilities.inpaint_mask = true` **and** `endpoint_ty
 Satisfying only one is refused: a measured case is `gpt-image`, which declares the mask but runs on the `auto` transport.
 When it refuses, the tool lists the enabled providers that meet every condition, and `genbox_providers` exposes each provider's `endpointType`.
 
+**This refusal is fixable, and we have verified the fix end to end:**
+
+1. In GenBox → settings → that provider, change `endpoint_type` from `auto` to `openai` (one field).
+2. From the command line: edit that entry's `endpoint_type` in `storage/providers.json`, then
+   `curl -X POST http://127.0.0.1:8892/api/providers/reload`.
+3. Call `genbox_image_edit` with the same `image` + `mask` (`mode: "inpaint"`) again.
+
+Measured (`gpt-image` / `gpt-image-2-vip`, 1024x1024 source plus a white-box mask):
+
+```
+status: completed | took 62.6s
+file: .genbox-out/real-inpaint/gpt-image_20261002_231748_inpaint_replace_the_marked_pap_b06078.png
+     1024x1024, 1,168,239 B - the lantern inside the white box became a hot air balloon,
+     with the lake, mountains and sky unchanged
+```
+
+> Why is `auto` refused? GenBox's gate is a **static declaration check** (`main.py:1504-1510`):
+> even though `auto` resolves to the openai protocol at request time (the generation status reports
+> `request_contract.protocol = openai`), the gate does not accept it. Flipping the field is therefore
+> behaviour-neutral - it just makes the implicit openai transport explicit.
+
 ### 5) `precision_edit_provider_unsupported`
 
 GenBox requires `capabilities.precision_edit = true` for the chosen provider (and a model it recognises for edits).

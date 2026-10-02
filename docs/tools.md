@@ -11,7 +11,7 @@
 | [`genbox_doctor`](#genbox_doctor) | Self-check the local GenBox setup: server reachability, authentication mode, provider and API-key readiness, ffmpeg availability and output-directory writability | 1 |
 | [`genbox_gallery`](#genbox_gallery) | List the most recent items in the GenBox media library (images and videos, newest first) and optionally copy them to a local directory | 6 |
 | [`genbox_health`](#genbox_health) | Check whether the local GenBox server is reachable and report its runtime status | 0 |
-| [`genbox_image_edit`](#genbox_image_edit) | Edit an existing image through a local GenBox server | 13 |
+| [`genbox_image_edit`](#genbox_image_edit) | Edit an existing image through a local GenBox server | 14 |
 | [`genbox_image_generate`](#genbox_image_generate) | Generate images from a text prompt through a local GenBox server | 9 |
 | [`genbox_image_upscale`](#genbox_image_upscale) | Upscale an image locally through GenBox (Lanczos/Bicubic/Nearest) | 5 |
 | [`genbox_image_variations`](#genbox_image_variations) | Ask a GenBox image provider for visual variations of an existing image | 6 |
@@ -79,6 +79,7 @@ Edit an existing image through a local GenBox server. mode=i2i re-renders the wh
 | `image` | string | yes | Source image: a local png/jpeg/webp path or a data URL. |
 | `mode` | one of: `i2i` | `inpaint` | `precision_edit` | no | Editing mode; defaults to 'i2i'. |
 | `mask` | string | no | Required for inpaint: png/webp mask path or data URL, same size as the source. White is edited. |
+| `referenceImages` | array of string | no | i2i only: extra reference images (local paths or data URLs) to blend with "image", which stays the first/base one. GenBox receives them as image_data_list and requires its first entry to equal the base image. |
 | `providers` | array of string | no | Provider ids to use. Defaults to every enabled image provider. |
 | `model` | string | no | Model id to request. Must belong to the selected provider. |
 | `size` | string | no | Target canvas for i2i/inpaint, such as '1024x1024'. |

@@ -101,8 +101,13 @@ if (wanted.has('edit')) {
 }
 
 if (wanted.has('inpaint')) {
+  // GenBox needs BOTH the declared capability and the OpenAI transport; a provider
+  // on endpoint_type=auto is refused even when it declares inpaint_mask.
   if (info?.capabilities?.inpaint_mask !== true) {
     step('inpaint skipped: ' + provider + ' does not declare inpaint_mask')
+  } else if (info?.endpointType !== 'openai') {
+    step('inpaint skipped: ' + provider + ' runs on endpoint_type=' + String(info?.endpointType || 'unknown')
+      + ', and GenBox only inpaints through endpoint_type=openai')
   } else if (!present(first)) {
     step('inpaint skipped: no source image')
   } else {

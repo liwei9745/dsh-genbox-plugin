@@ -6,7 +6,7 @@ export interface GenBoxClientOptions {
   baseUrl: string
   adminKey?: string
   requestTimeoutMs?: number
-  /** How long to wait between "GenBox is busy" attempts (default 3000 ms). */
+  /** Base wait before retrying a rate-limited call; doubles per attempt (default 5000 ms). */
   busyRetryDelayMs?: number
 }
 
@@ -90,7 +90,7 @@ export class GenBoxClient {
     this.baseUrl = options.baseUrl.replace(/\/+$/, '')
     this.adminKey = options.adminKey && options.adminKey.trim() !== '' ? options.adminKey : undefined
     this.requestTimeoutMs = options.requestTimeoutMs ?? 120000
-    this.busyRetryDelayMs = options.busyRetryDelayMs ?? 3000
+    this.busyRetryDelayMs = options.busyRetryDelayMs ?? 5000
   }
 
   private headers(json: boolean): Headers {
@@ -136,15 +136,18 @@ export class GenBoxClient {
       // default is 10 requests per minute per IP, and only /api/generate is
       // throttled). The request was refused, so waiting and asking again cannot
       // duplicate work - and a submit that just fails makes the caller redo
-      // everything. The retry smooths over short bursts, it is not a long wait.
+      // everything. The wait doubles per attempt (5s, 10s, 20s by default).
       //
       // Only 429: GenBox reports permanent "this feature is not installed" states
       // (the missing cutout checkpoint) as 503, and waiting on those just delays a
       // message the caller needs now.
       const busy = response.status === 429
       if (busy && attempt < busyRetries) {
-        console.warn('[genbox] GenBox is busy (HTTP ' + response.status + '), retrying ' + path + ' in ' + this.busyRetryDelayMs + 'ms')
-        await this.sleep(this.busyRetryDelayMs, signal)
+        // The upstream limit is per minute (10 generate requests per IP), so a flat
+        // short wait rarely clears it: back off further each attempt.
+        const waitMs = Math.min(this.busyRetryDelayMs * 2 ** attempt, 30000)
+        console.warn('[genbox] GenBox is rate limiting (' + response.status + '), retrying ' + path + ' in ' + waitMs + 'ms')
+        await this.sleep(waitMs, signal)
         continue
       }
       throw new GenBoxError(
