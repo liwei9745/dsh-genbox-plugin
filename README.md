@@ -1,6 +1,8 @@
 # dsh-genbox-plugin
 
 [![npm](https://img.shields.io/npm/v/dsh-genbox-plugin)](https://www.npmjs.com/package/dsh-genbox-plugin)
+[![CI](https://github.com/liwei9745/dsh-genbox-plugin/actions/workflows/ci.yml/badge.svg)](https://github.com/liwei9745/dsh-genbox-plugin/actions/workflows/ci.yml)
+[![license](https://img.shields.io/npm/l/dsh-genbox-plugin)](./LICENSE)
 
 把 [GenBox](https://github.com/liwei9745/GenBox)（本地 FastAPI 媒体生成工作台）接入
 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的插件 bundle，让 DSH 里的 agent

@@ -1,6 +1,8 @@
 # dsh-genbox-plugin
 
 [![npm](https://img.shields.io/npm/v/dsh-genbox-plugin)](https://www.npmjs.com/package/dsh-genbox-plugin)
+[![CI](https://github.com/liwei9745/dsh-genbox-plugin/actions/workflows/ci.yml/badge.svg)](https://github.com/liwei9745/dsh-genbox-plugin/actions/workflows/ci.yml)
+[![license](https://img.shields.io/npm/l/dsh-genbox-plugin)](./LICENSE)
 
 Bring a local [GenBox](https://github.com/liwei9745/GenBox) media server (FastAPI, multi-provider image and video
 generation) into [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) as agent tools: generate images,
