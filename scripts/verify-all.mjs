@@ -31,6 +31,7 @@ const suites = [
   { name: 'image + video tools', file: 'verify-tools.mjs', needs: ['genbox'] },
   { name: 'background jobs', file: 'verify-background.mjs', needs: ['genbox'] },
   { name: 'gallery + prompt', file: 'verify-media.mjs', needs: ['genbox'] },
+  { name: 'gallery filters', file: 'verify-gallery-filters.mjs', needs: ['genbox'] },
   { name: 'precision annotations', file: 'verify-precision.mjs', needs: ['genbox'] },
 ]
 

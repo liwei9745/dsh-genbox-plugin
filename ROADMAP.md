@@ -14,7 +14,7 @@
 | G0.5 可装 | 打包成 bundle 并能被宿主加载 | `dsh plugin add <tarball>` 后启动打印 `[genbox] plugin loaded` | ✅ 已完成 |
 | G1 可分发 | GitHub 仓库 + npm 包 + `dsh-plugin` topic | 仓库公开可访问、`npm view dsh-genbox-plugin version` 返回 0.1.0、仓库 Topics 里有 `dsh-plugin` | ⏳ **等账号授权** |
 | G1.5 可发现 | Discussions 发帖 + 教程博客 | 帖子链接与博客链接 | ⏳ 草稿已写好，等账号授权 |
-| G2 可协作 | issue 模板、贡献指南、CI 绿、用户自检工具 | CI 在 PR 上跑通 typecheck+build；`genbox_doctor` 在健康/故障两种环境下给出正确结论 | 🟡 CI 已写好，等仓库建立；doctor 已完成 |
+| G2 可协作 | issue 模板、贡献指南、CI 绿、用户自检工具 | CI 在 PR 上跑通 typecheck+build；`genbox_doctor` 在健康/故障两种环境下给出正确结论；issue 模板要求贴 `verify-all` 与 doctor 输出 | 🟡 只等仓库建立 |
 | G3 真跑 | 真实 provider 端到端 | 用真实 Key 生成一张图、一段视频并落盘 | ⏳ 需要你在 GenBox 配 Key |
 | G4a 非阻塞 | 生图/生视频支持 `background: true` 立即返回 + `genbox_task` 查询/下载/取消 | `scripts/verify-background.mjs`：生图 85ms 返回、随后 settled + 文件落盘；视频同样通过 | ✅ 已完成 |
 | G4b 体验 | UI 卡片（`presentCall`/`presentResult`）、改用 DSH 原生 `ctx.jobs` 后台任务 | 卡片在 Web 端渲染；任务返回原生 jobId | ⬜ 未开始 |

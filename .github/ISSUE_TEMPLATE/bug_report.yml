@@ -1,0 +1,61 @@
+name: Bug report
+description: Something in dsh-genbox-plugin does not work
+title: "[bug] "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Two commands answer most questions before we even start:
+
+        ```sh
+        node scripts/verify-all.mjs     # which suites pass, skip or fail
+        # then, inside a DSH session:
+        #   genbox_doctor                 # reachability, auth, providers/keys, output dir, ffmpeg
+        ```
+  - type: textarea
+    id: doctor
+    attributes:
+      label: genbox_doctor output
+      description: Paste the tool result verbatim, including the fix hints.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: verify
+    attributes:
+      label: node scripts/verify-all.mjs output
+      description: Leave blank if the plugin does not install at all.
+      render: text
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: plugin version, GenBox version, DSH version, operating system
+      placeholder: "0.1.0 / GenBox 2.6.12 / DSH 0.2.0-rc.2 / Windows 11"
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: The exact tool call (arguments included) and the error text you got.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected instead
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which area
+      options:
+        - image generation / editing
+        - video generation
+        - local video editing (ffmpeg)
+        - media library
+        - installation / loading
+        - other
+    validations:
+      required: true

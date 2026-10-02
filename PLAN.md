@@ -284,3 +284,13 @@ OK
 - 这两个脚本的输出目录改成可移植（`VERIFY_OUT_DIR`，默认 `.genbox-out`），不再硬编码 Windows 路径。
 - 发布预检现状：tarball 现在含 `LICENSE / README.md / README.en.md / cordis.patch.yml / lib/*`，
   npm 包名仍未被占用；只剩三个账号项（gh 未安装、gh 未登录、npm 未登录）。
+### 第 14 轮（图库检索 + 面向社区的收尾）
+
+- `genbox_gallery` 增加 `type / model / query / since` 过滤（GenBox 本身没有搜索也没有分页，只能取最近 N 条，
+  所以过滤放在插件侧做）。实测：35 条里 image 26 + video 9 恰好分区、query=red_cube 命中 7 条、
+  since=2999 为 0、since=2000 为 35，全部断言通过。
+- 顺带纠正一个语义：图库条目的 `model` 字段里记的是 **provider id**，不是模型名——参数说明已改准。
+- 新增 GitHub issue 模板（`.github/ISSUE_TEMPLATE/bug_report.yml` + `config.yml`）：强制要求贴 `verify-all` 与
+  `genbox_doctor` 输出，把「先自检再提问」写进流程。
+- `package.json` 补 `engines.dsh`（社区插件约定，市场用它做兼容性展示）。
+- `verify-all` 现在 8 个套件全绿（新增 gallery filters 套件）。

@@ -79,7 +79,7 @@ dsh plugin --profile <profile> add github:<you>/GenBox-dsh
 | `genbox_video_generate` | text to video, image to video, first/last keyframes |
 | `genbox_video_edit` | local ffmpeg editing: trim, concat, speed, mute, resize, crop, volume, replace_audio, burn_subtitles, to_gif, extract_frame |
 | `genbox_task` | check, download or cancel a background job; image and video tools accept `background: true` |
-| `genbox_gallery` | browse the media library and copy items locally |
+| `genbox_gallery` | browse the media library and copy items locally; filter by `type`, `model`, `query` or `since` |
 | `genbox_prompt_optimize` | rewrite a rough prompt with GenBox prompt assistant |
 
 Generated media lands in `outputDir` and the absolute paths are returned to the model, which can then open them with

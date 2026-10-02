@@ -96,7 +96,7 @@ dsh plugin --profile <profile> add github:<you>/GenBox-dsh
 | `genbox_video_generate` | 文生视频 / 图生视频 / 首尾关键帧；改视频用 `i2vid` 或 `keyframes` 再生成 |
 | `genbox_task` | 查询/取消后台任务。生图/生视频都支持 `background: true` 立即返回，再用它收取结果 |
 | `genbox_video_edit` | 本地 ffmpeg 剪辑：trim / concat / speed / mute / resize / crop / volume / replace_audio / burn_subtitles / to_gif / extract_frame（不需要 GenBox、不需要 Key） |
-| `genbox_gallery` | 媒体库检索并复制到本地 |
+| `genbox_gallery` | 媒体库检索并复制到本地；支持 `type/model/query/since` 过滤（无需分页，GenBox 只给最近 N 条） |
 | `genbox_prompt_optimize` | 提示词优化 |
 
 生成的图片/视频会落到 `outputDir`（默认 `.genbox`）下并把绝对路径返回给模型；模型可以直接用

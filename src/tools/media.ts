@@ -53,6 +53,18 @@ export function registerMediaTools(ctx: Context, client: GenBoxClient, config: C
         type: 'string',
         description: 'When set, copy every matching item into this directory (relative paths resolve against the session workspace).',
       },
+      query: {
+        type: 'string',
+        description: 'Case-insensitive substring match over the prompt, model and file name.',
+      },
+      model: {
+        type: 'string',
+        description: 'Only return items whose recorded model field equals this value. GenBox records the provider id here, not the model name.',
+      },
+      since: {
+        type: 'string',
+        description: 'Only return items created at or after this date, for example 2026-10-01 or 2026-10-01T12:00:00.',
+      },
     },
     output: {
       schema: { type: 'object', additionalProperties: true },
@@ -78,7 +90,22 @@ export function registerMediaTools(ctx: Context, client: GenBoxClient, config: C
         exec.signal,
       )
       const wanted = args.type ?? 'all'
-      const raw = (response.items ?? []).filter((item) => wanted === 'all' || (item.type ?? 'image') === wanted)
+      const needle = (args.query ?? '').trim().toLowerCase()
+      const modelFilter = (args.model ?? '').trim().toLowerCase()
+      const since = (args.since ?? '').trim()
+      let raw = (response.items ?? []).filter((item) => wanted === 'all' || (item.type ?? 'image') === wanted)
+      if (needle !== '') {
+        raw = raw.filter((item) => [item.prompt, item.model, item.local_path, item.id]
+          .some((field) => typeof field === 'string' && field.toLowerCase().includes(needle)))
+      }
+      if (modelFilter !== '') {
+        raw = raw.filter((item) => (item.model ?? '').toLowerCase() === modelFilter)
+      }
+      if (since !== '') {
+        // GenBox writes local timestamps ("2026-10-02 19:25:37"), so compare as text.
+        const normalized = since.replace('T', ' ').replace(/Z$/, '')
+        raw = raw.filter((item) => typeof item.created_at === 'string' && item.created_at >= normalized)
+      }
       const directory = args.downloadTo !== undefined && args.downloadTo !== ''
         ? resolveOutputDir(config.outputDir, args.downloadTo)
         : undefined
