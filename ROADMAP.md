@@ -20,7 +20,8 @@
 | G4b 体验 | UI 卡片（`presentCall`/`presentResult`）、改用 DSH 原生 `ctx.jobs` 后台任务 | 卡片在 Web 端渲染；任务返回原生 jobId | ⬜ 未开始 |
 | G5a 视频编辑 | `genbox_video_edit`：trim / concat / speed / mute / resize / extract_frame（本地 ffmpeg，补 GenBox 的改视频缺口） | `scripts/verify-video-edit.mjs`：六个操作全部 FILE-OK（trim 1.53s、concat 5.04s、speed 1.67s、resize 160x120、帧 PNG） | ✅ 已完成 |
 | G5b 视频编辑 II | crop / volume / replace_audio / burn_subtitles / to_gif 已补齐（本机 ffmpeg 带 libass） | `scripts/verify-video-edit.mjs`：11/11 FILE-OK | ✅ 已完成 |
-| G5c 扩展 | 精准改图批注、抠图 checkpoint 流程、音轨混合（amix） | 各自的端到端脚本 | ⬜ 未开始 |
+| G5c 批注改图 | 纯 JS 生成批注叠加图（箭头/方框/椭圆/画笔 + 编号），拼 GenBox 的 `genbox-annotation-v3` 三件套 | `scripts/verify-annotate.mjs`（ffprobe 独立验证 320x240 RGBA）、`scripts/verify-precision.mjs`（信封通过 GenBox 输入校验，停在 provider 授权门槛） | ✅ 已完成 |
+| G5d 扩展 | 抠图 checkpoint 流程、音轨混合（amix） | 各自的端到端脚本 | ⬜ 未开始 |
 | G6 复用 | 若出现第二个媒体后端，再抽 `dsh-media` Service Definition / Provider / Consumer 三层 | 第二个 provider 无需改工具层 | ⬜ 观察中 |
 
 ## 依赖你（或需要账号）的动作

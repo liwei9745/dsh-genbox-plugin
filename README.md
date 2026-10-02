@@ -86,7 +86,7 @@ dsh plugin --profile <profile> add github:<you>/GenBox-dsh
 | `genbox_health` | 探测 GenBox 是否在线 |
 | `genbox_providers` | 列出 provider / 模型 / 能力（调用前先查能力） |
 | `genbox_image_generate` | 文生图，可多 provider 并排、多张、指定尺寸质量 |
-| `genbox_image_edit` | 改图：`i2i` / `inpaint`（白=编辑）/ `precision_edit`（resize 画布） |
+| `genbox_image_edit` | 改图：`i2i` / `inpaint`（白=编辑）/ `precision_edit`（画布 resize，或带批注：箭头/方框/椭圆/画笔） |
 | `genbox_image_upscale` | 本地超分（不需要 API Key） |
 | `genbox_image_variations` | 生成变体 |
 | `genbox_cutout` | 抠图（需要 GenBox 侧安装 checkpoint） |

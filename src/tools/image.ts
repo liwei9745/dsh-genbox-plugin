@@ -1,5 +1,6 @@
 import { mkdir } from 'node:fs/promises'
-import { join } from 'node:path'
+import { isAbsolute, join, resolve } from 'node:path'
+import { readImageSize, renderAnnotationOverlay, toGenBoxAnnotations, type PixelAnnotation } from '../annotate.js'
 import type { Context } from '@deepseek-ai/cordis'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import type { GenBoxClient } from '../client.js'
@@ -222,6 +223,32 @@ export function registerImageTools(ctx: Context, client: GenBoxClient, config: C
       strength: { type: 'number', description: 'i2i transformation strength (0-1); GenBox defaults to 0.55.' },
       precisionTargetSize: { type: 'string', description: "precision_edit only: target canvas 'WIDTHxHEIGHT' required by resize mode." },
       precisionOutputSizePolicy: { type: 'string', enum: ['strict', 'fit_crop'], description: "precision_edit resize output policy; defaults to 'strict'." },
+      annotations: {
+        type: 'array',
+        description: 'precision_edit: what to change and where, in source-image pixels. Each entry is drawn as a numbered marker on the overlay GenBox receives.',
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            kind: { type: 'string', enum: ['arrow', 'rectangle', 'ellipse', 'brush'], required: true },
+            instruction: { type: 'string', required: true },
+            x: { type: 'number' },
+            y: { type: 'number' },
+            x2: { type: 'number' },
+            y2: { type: 'number' },
+            width: { type: 'number' },
+            height: { type: 'number' },
+            points: {
+              type: 'array',
+              items: {
+                type: 'object',
+                additionalProperties: false,
+                properties: { x: { type: 'number', required: true }, y: { type: 'number', required: true } },
+              },
+            },
+          },
+        },
+      },
       outputDir: { type: 'string', description: 'Directory for the downloaded results. Defaults to the plugin outputDir config.' },
       background: {
         type: 'boolean',
@@ -254,15 +281,44 @@ export function registerImageTools(ctx: Context, client: GenBoxClient, config: C
         body.mask_contract = 'genbox-edit-white-v1'
         if (args.size !== undefined && args.size !== '') body.size = args.size
       } else {
-        if (args.precisionTargetSize === undefined || args.precisionTargetSize.trim() === '') {
+        // GenBox requires an explicit per-provider model for precision_edit.
+        if (args.model === undefined || args.model.trim() === '') {
           throw new Error(
-            "mode=precision_edit without annotations requires precisionTargetSize, for example '1536x1024'.",
+            'mode=precision_edit needs a model, because GenBox requires per-provider model settings for this mode.',
           )
         }
-        body.precision_size_mode = 'resize'
-        body.precision_target_size = args.precisionTargetSize
-        body.precision_output_size_policy = args.precisionOutputSizePolicy ?? 'strict'
+        const marked = (args.annotations ?? []) as unknown as PixelAnnotation[]
         body.precision_strategy = 'standard'
+        if (marked.length === 0) {
+          if (args.precisionTargetSize === undefined || args.precisionTargetSize.trim() === '') {
+            throw new Error(
+              "mode=precision_edit without annotations requires precisionTargetSize, for example '1536x1024'.",
+            )
+          }
+          body.precision_size_mode = 'resize'
+          body.precision_target_size = args.precisionTargetSize
+          body.precision_output_size_policy = args.precisionOutputSizePolicy ?? 'strict'
+        } else {
+          if (args.image.startsWith('data:')) {
+            throw new Error(
+              'mode=precision_edit with annotations needs the image to be a local file path, because the overlay '
+              + 'must match the source pixel size exactly.',
+            )
+          }
+          const sourcePath = isAbsolute(args.image) ? args.image : resolve(process.cwd(), args.image)
+          const size = await readImageSize(sourcePath)
+          const overlay = renderAnnotationOverlay(size.width, size.height, marked)
+          body.annotation_image_data = 'data:image/png;base64,' + overlay.toString('base64')
+          body.annotation_contract = 'genbox-annotation-v3'
+          body.annotations = toGenBoxAnnotations(size.width, size.height, marked)
+          if (args.precisionTargetSize !== undefined && args.precisionTargetSize.trim() !== '') {
+            body.precision_size_mode = 'resize'
+            body.precision_target_size = args.precisionTargetSize
+            body.precision_output_size_policy = args.precisionOutputSizePolicy ?? 'strict'
+          } else {
+            body.precision_size_mode = 'preserve'
+          }
+        }
       }
 
       return await runGeneration(

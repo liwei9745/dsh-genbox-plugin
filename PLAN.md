@@ -239,3 +239,22 @@ volume 3.02s | replace_audio 2.07s | burn_subtitles 3s | to_gif 1.5s/38582B | ex
 OK (11/11)
 `@
 
+
+### 第 8 轮（G5c：精准改图批注）
+
+GenBox 的 precision_edit 要求"底图 + 批注叠加图 + 批注数组"三件套齐全，且叠加图必须与底图**像素尺寸完全一致**。
+插件现在自己把批注画出来：纯 JS 的 PNG 编码器（zlib + CRC32，无原生依赖）+ 箭头/方框/椭圆/画笔 + 编号角标，
+坐标从**像素**换算成 GenBox 要的 0..1 归一化值，并按 v3 契约校验（≤100 条、brush 2..1024 点、文本总量 ≤4000、
+arrow 端点不可重合、矩形/椭圆必须正尺寸）。
+
+实测：
+
+`@
+verify-annotate.mjs : base 320x240 -> overlay 2437B，ffprobe 独立验证 {"width":320,"height":240,"pix_fmt":"rgba"}  OK
+verify-precision.mjs: 本地路径守卫 ok / model 守卫 ok
+                      envelope passed GenBox input validation -> 停在 precision_edit_provider_unsupported（预期）
+`@
+
+**为什么"停在 provider 门槛"就是通过**：GenBox 先校验请求信封（annotation 三件套、尺寸一致性、契约字段），
+再校验 provider 授权。如果我们的批注结构有问题，会在**第一步**就报 contract 错误；实际报的是第二步的门槛，
+说明信封是合法的。缺少"真实已验证改图模型"是 GenBox 的授权设计，不是插件缺陷。
