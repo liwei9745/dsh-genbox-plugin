@@ -65,6 +65,8 @@ GenBox 图库素材、本地产物缩略图，以及每条复现命令。
 | M6 | 打包与分发 | ✅ `pnpm pack` → `dsh plugin add <tarball>` → 启动打印 `[genbox] plugin loaded` |
 | M7 | 发布到 npm | ✅ `dsh-genbox-plugin@0.1.0`，并已用**从 npm 安装的那份产物**实跑生图 |
 | M8 | 插件市场就绪性 | ✅ 用**市场自己的模块**验证：`dsh.bundle.patch` 就位、host 兼容（0.2.0-rc.2 → compatible）、profile 预检 0 risks |
+| M9 | **真实 provider 端到端** | ✅ 用本机 `gpt-image`（model `gpt-image-2-vip`）实跑：真文生图 844KB PNG 1024×1024（50s）+ 真 i2i 改图 1.25MB；6 项断言全过 |
+| M10 | 验收旅程 | ✅ `verify-journey.mjs` 17 项断言：自检 → 生图 → 图生图 → 精准改图 → 后台生视频 → 收取 → **取消** → 本地剪辑 → 图库 |
 
 ## 安装
 

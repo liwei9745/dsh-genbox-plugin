@@ -61,17 +61,21 @@ const suites = [
   { name: 'native job registry', file: 'verify-native-jobs.mjs', needs: ['genbox'] },
   { name: 'precision annotations', file: 'verify-precision.mjs', needs: ['genbox'] },
   { name: 'user journey (generate → edit → video → cut)', file: 'verify-journey.mjs', needs: ['genbox', 'ffmpeg'] },
+  { name: 'real provider (spends a key)', file: 'verify-real-provider.mjs', needs: ['realprovider'] },
 ]
 
 const hasGenbox = await genboxUp()
 const hasFfmpeg = ffmpegUp()
 const hasMarket = marketApp() !== undefined
 const hasInstalled = installedProfile() !== undefined
+// Opt-in: only a live key makes this suite meaningful, and it costs money.
+const hasRealProvider = typeof process.env.GENBOX_REAL_PROVIDER === 'string' && process.env.GENBOX_REAL_PROVIDER !== ''
 console.log(
   'prerequisites: genbox=' + (hasGenbox ? 'up' : 'down')
   + ' ffmpeg=' + (hasFfmpeg ? 'ok' : 'missing')
   + ' market=' + (hasMarket ? 'ok' : 'missing')
-  + ' installed=' + (hasInstalled ? 'ok' : 'set DSH_PROFILE_DIR'),
+  + ' installed=' + (hasInstalled ? 'ok' : 'set DSH_PROFILE_DIR')
+  + ' real-provider=' + (hasRealProvider ? 'ok' : 'set GENBOX_REAL_PROVIDER'),
 )
 
 const results = []
@@ -79,7 +83,8 @@ for (const suite of suites) {
   const missing = suite.needs.filter((need) => (need === 'genbox' && !hasGenbox)
     || (need === 'ffmpeg' && !hasFfmpeg)
     || (need === 'market' && !hasMarket)
-    || (need === 'installed' && !hasInstalled))
+    || (need === 'installed' && !hasInstalled)
+    || (need === 'realprovider' && !hasRealProvider))
   if (missing.length > 0) {
     results.push({ ...suite, status: 'SKIP', detail: 'needs ' + missing.join(', ') })
     continue

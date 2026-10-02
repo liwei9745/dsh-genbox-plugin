@@ -46,6 +46,10 @@ upgraded independently. GenBox is GPL-3.0; this plugin is MIT and contains none 
 | M5 | `genbox_gallery`, `genbox_prompt_optimize` | done |
 | M6 | packaging and distribution | done - `pnpm pack` -> `dsh plugin add <tarball>` -> `[genbox] plugin loaded` |
 | G5 | local video editing (11 operations) and precision-edit annotations | done - every operation verified |
+| M7 | published to npm | done - `dsh-genbox-plugin@0.1.1`, smoke-tested by generating an image with the npm-installed copy |
+| M8 | plugin-market readiness | done - checked with the market's own modules: bundle patch present, host compatible, profile preflight 0 risks |
+| M9 | **real provider end to end** | done - live `gpt-image` run: 844 KB PNG 1024x1024 text-to-image (50s) plus a real image-to-image edit |
+| M10 | acceptance journey | done - `verify-journey.mjs`, 17 checks from doctor through generate/edit/annotate/video/cancel/ffmpeg/gallery |
 
 ## Install
 

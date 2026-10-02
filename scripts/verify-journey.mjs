@@ -45,17 +45,31 @@ const report = await tool('genbox_doctor').execute({}, exec)
 check('doctor: the setup is healthy', report.ok === true)
 step('doctor ok, ' + report.checks.length + ' checks, ' + report.nextSteps.length + ' next steps')
 
-// 2. which model would we use? (precision_edit needs an explicit model, because
-//    GenBox keeps per-provider model settings for that mode)
+// 2. which providers would we use?
+//
+//    This suite must never spend a real key, so it prefers the zero-cost mock even
+//    when a live provider is enabled, and it only asks for the capabilities the
+//    journey actually exercises (precision_edit is opt-in per provider).
 const providers = await tool('genbox_providers').execute({ enabledOnly: true }, exec)
-const imageProvider = (providers.providers ?? []).find((provider) => provider.enabled === true && (provider.type ?? 'image') === 'image')
-check('providers: there is an enabled image provider to work with', imageProvider !== undefined)
+const allProviders = providers.providers ?? []
+const ofType = (type) => allProviders.filter((provider) => provider.enabled === true && (provider.type ?? 'image') === type)
+const preferMock = (list) => list.find((provider) => String(provider.id).startsWith('mock')) ?? list[0]
+const canPrecise = (provider) => provider.capabilities?.precision_edit === true
+  || provider.modelCapabilities?.[provider.model]?.precision_edit === true
+
+const imageProvider = preferMock(ofType('image'))
+const precisionProvider = preferMock(ofType('image').filter(canPrecise))
+const videoProvider = preferMock(ofType('video'))
 const model = imageProvider?.model ?? imageProvider?.models?.[0]
-step('using provider ' + String(imageProvider?.id) + ' model ' + String(model))
+check('providers: an enabled image provider exists', imageProvider !== undefined)
+check('providers: a video provider exists for the background step', videoProvider !== undefined)
+step('image ' + String(imageProvider?.id) + '/' + String(model)
+  + ' | precision_edit: ' + String(precisionProvider?.id ?? '(none)')
+  + ' | video ' + String(videoProvider?.id))
 
 // 3. generate an image
 const generated = await tool('genbox_image_generate').execute(
-  { prompt: 'a paper boat on a pond, journey step one', providers: ['mock-openai'], size: '512x512' },
+  { prompt: 'a paper boat on a pond, journey step one', providers: [imageProvider.id], size: '512x512' },
   exec,
 )
 const first = generated.images?.[0]?.file
@@ -64,7 +78,7 @@ step('generated ' + first)
 
 // 3. edit that image (image-to-image)
 const edited = await tool('genbox_image_edit').execute(
-  { prompt: 'make it dusk', image: first, mode: 'i2i', providers: ['mock-openai'] },
+  { prompt: 'make it dusk', image: first, mode: 'i2i', providers: [imageProvider.id] },
   exec,
 )
 const second = edited.images?.[0]?.file
@@ -72,26 +86,33 @@ check('edit (i2i): the previous output is a valid input', edited.status === 'com
 check('edit (i2i): the result is a new file, nothing overwritten', second !== first)
 step('edited ' + second)
 
-// 4. mark it up and let GenBox apply the instruction on the same canvas
-const marked = await tool('genbox_image_edit').execute(
-  {
-    prompt: 'turn the marked area into a lantern',
-    image: second,
-    mode: 'precision_edit',
-    providers: [imageProvider.id],
-    model,
-    annotations: [{ kind: 'rectangle', instruction: 'here', x: 60, y: 60, width: 160, height: 120 }],
-  },
-  exec,
-)
-const third = marked.images?.[0]?.file
-check('precision edit: annotations survive into a real result', marked.status === 'completed' && present(third))
-check('precision edit: another new file', third !== second && third !== first)
-step('precision edit -> ' + third)
+// 4. mark it up and let GenBox apply the instruction on the same canvas.
+//    Only when a provider declares precision_edit: GenBox refuses the mode
+//    otherwise, and this suite has to work against whatever provider mix exists.
+let third
+if (precisionProvider === undefined) {
+  step('precision edit skipped: no enabled provider declares precision_edit')
+} else {
+  const marked = await tool('genbox_image_edit').execute(
+    {
+      prompt: 'turn the marked area into a lantern',
+      image: second,
+      mode: 'precision_edit',
+      providers: [precisionProvider.id],
+      model: precisionProvider.model ?? precisionProvider.models?.[0],
+      annotations: [{ kind: 'rectangle', instruction: 'here', x: 60, y: 60, width: 160, height: 120 }],
+    },
+    exec,
+  )
+  third = marked.images?.[0]?.file
+  check('precision edit: annotations survive into a real result', marked.status === 'completed' && present(third))
+  check('precision edit: another new file', third !== second && third !== first)
+  step('precision edit -> ' + third)
+}
 
 // 5. submit a video in the background and collect it with the task tool
 const submitted = await tool('genbox_video_generate').execute(
-  { prompt: 'a paper boat drifting, journey step five', provider: 'mock-video', background: true },
+  { prompt: 'a paper boat drifting, journey step five', provider: videoProvider.id, background: true },
   exec,
 )
 check('video: the call returns a task handle instead of blocking', submitted.background === true && typeof submitted.taskId === 'string')
@@ -126,10 +147,26 @@ const items = Array.isArray(gallery.items) ? gallery.items : (Array.isArray(gall
 check('gallery: the library still answers after all of that', items.length > 0)
 step('gallery returned ' + items.length + ' image item(s)')
 
+// 8. a job that was started by mistake can be called off, and stays off
+const doomed = await tool('genbox_video_generate').execute(
+  { prompt: 'a mistake that gets cancelled, journey step eight', provider: videoProvider.id, background: true },
+  exec,
+)
+const running = await tool('genbox_task').execute({ id: doomed.taskId, kind: 'video' }, exec)
+check('cancel: the fresh job reports itself as running', running.running === true && running.files.length === 0)
+const cancelled = await tool('genbox_task').execute({ id: doomed.taskId, kind: 'video', cancel: true }, exec)
+check('cancel: the gesture reports cancelled and hands back no files', cancelled.status === 'cancelled' && cancelled.running === false && cancelled.files.length === 0)
+step('cancelled ' + doomed.taskId)
+
+// Give a cancelled job the chance to finish anyway before believing it.
+await new Promise((resolve) => setTimeout(resolve, 6000))
+const afterwards = await tool('genbox_task').execute({ id: doomed.taskId, kind: 'video' }, exec)
+check('cancel: it stays cancelled and never produces a file', afterwards.status === 'cancelled' && afterwards.files.length === 0)
+
 // Every artifact has to be distinct: no tool may quietly clobber another's output.
 const artifacts = [first, second, third, clip, trimmed.file].filter((file) => typeof file === 'string')
-check('all five artifacts are distinct paths', new Set(artifacts).size === artifacts.length)
-check('all five artifacts are still on disk', artifacts.every((file) => present(file)))
+check('all ' + artifacts.length + ' artifacts are distinct paths', new Set(artifacts).size === artifacts.length)
+check('all ' + artifacts.length + ' artifacts are still on disk', artifacts.every((file) => present(file)))
 
 let failures = 0
 for (const [label, ok] of checks) {

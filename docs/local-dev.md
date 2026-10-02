@@ -88,6 +88,24 @@ node scripts\verify-all.mjs
 在 GenBox 界面（`http://127.0.0.1:8892`）里配置 provider 与 Key，或复用现有 `storage/providers.json`。
 插件侧不需要改任何东西：`genbox_providers` 会列出已启用的 provider。
 
+配好之后可以跑**唯一一条花真钱**的验证（默认不跑，必须显式给 provider id）：
+
+```powershell
+$env:GENBOX_REAL_PROVIDER = 'gpt-image'      # 你在 GenBox 里配好的那个 id
+node scripts\verify-real-provider.mjs
+# 期望：真图落盘（PNG/JPEG，尺寸可读）+ i2i 产出第二张，且不覆盖第一张
+```
+
+它只做一次文生图 + 一次图生图，并自带跳过逻辑：没设环境变量就 SKIP，所以放进 `verify-all.mjs` 也安全。
+
+实测记录（2026-10-02，provider `gpt-image`，model `gpt-image-2-vip`）：
+
+```
+generated: ...\gpt-image_..._a_red_paper_lantern_floating_o_796097.png (844375B, png 1024x1024, 50.4s)
+edited:    ...\gpt-image_..._i2i_repaint_it_as_a_snowy_morn_96c473.png (1254918B, png)
+OK (6 checks, provider gpt-image)
+```
+
 ## 6. 插件级验证脚本
 
 | 脚本 | 作用 |

@@ -90,7 +90,9 @@ src/index.ts           注册 14 个工具（apply(ctx, config)）
 
 | 层 | 命令 | 覆盖 |
 |---|---|---|
-| 套件 | `node scripts/verify-all.mjs` | **18 个套件**；缺前置条件如实 SKIP |
+| 套件 | `node scripts/verify-all.mjs` | **20 个套件**；缺前置条件如实 SKIP |
+| 用户旅程 | 同上（`verify-journey.mjs`） | 自检 → 生图 → 图生图 → 精准改图 → 后台生视频 → 收取 → **取消** → 本地剪辑 → 图库 |
+| 真实 provider | `GENBOX_REAL_PROVIDER=gpt-image node scripts/verify-real-provider.mjs` | 真花钱的那一条：真图 + 真改图，默认 SKIP |
 | 发布回读 | `node scripts/verify-published.mjs` | registry 上的版本/关键字/tarball 内容 |
 | 装出来的产物 | `DSH_PROFILE_DIR=<profile> node scripts/verify-installed-package.mjs` | 已安装包与仓库构建的工具集一致 |
 | 市场就绪 | `node scripts/verify-market-readiness.mjs` | 用**市场自己的模块**判定 host 兼容与 profile 预检 |
