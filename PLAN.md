@@ -294,3 +294,13 @@ OK
   `genbox_doctor` 输出，把「先自检再提问」写进流程。
 - `package.json` 补 `engines.dsh`（社区插件约定，市场用它做兼容性展示）。
 - `verify-all` 现在 8 个套件全绿（新增 gallery filters 套件）。
+### 第 16 轮（真实发布通道打通到「只差一个验证码」）
+
+- npm 已用 `npm login --auth-type=web` 登录成功（账号 `monkeyboss`，凭据写入 `~/.npmrc`）。
+- 预检全绿后执行 `node scripts/publish.mjs --execute`，构建与打包全部成功，**发布被 npm 以 403 拒绝**：
+  `Two-factor authentication or granular access token with bypass 2fa enabled is required to publish packages.`
+  → 账号开了 2FA，发布必须带一次性验证码（或允许绕过 2FA 的 granular token）。
+- 据此做了三件事：① 发布脚本支持 `NPM_OTP`；② 安全助手 `publish-with-token.ps1` 增加 OTP 提示；
+  ③ 新增 `scripts/verify-published.mjs`，发布后回读校验（版本/engines.dsh/关键字/tarball 内容），现在会如实报「尚未发布」。
+- 另外确认：本机 **没有** 可用的 GitHub 缓存凭据（`git credential fill` 只回 username=liwei9745，没有 password），
+  GitHub 建仓仍需一个 `repo` 权限 token。

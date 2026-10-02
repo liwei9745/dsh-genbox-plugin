@@ -132,6 +132,8 @@ node scripts/verify-tools.mjs   # 端到端（需 GenBox + mock provider 已启�
 
 1. `pnpm build` 后 `pnpm pack`，确认 tarball 内含 `lib/`、`cordis.patch.yml`、`README.md`。
 2. 发 npm：`pnpm publish`。用户 `dsh plugin add dsh-genbox-plugin` 装到的是预构建产物，不需要构建授权。
+   **账号开了 2FA 时必须带一次性验证码**：`pnpm publish --otp=<code>`，或改用允许绕过 2FA 的 granular token。
+   发完用 `node scripts/verify-published.mjs` 回读校验（版本号、engines.dsh、关键字、tarball 内容）。
 3. GitHub 仓库 About → Topics 加 `dsh-plugin`（官方指定的社区发现方式；官方当前不接受外部 PR）。
 4. 到 DSH 的 GitHub Discussions 发帖介绍。
 

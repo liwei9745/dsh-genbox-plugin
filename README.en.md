@@ -129,6 +129,8 @@ node scripts/lab.mjs        # http://127.0.0.1:3098/
 
 1. `pnpm build` then `pnpm pack`; confirm the tarball contains `lib/`, `cordis.patch.yml` and both READMEs.
 2. `pnpm publish`. Users then install prebuilt code, with no build authorisation needed.
+   **With 2FA enabled npm demands a one-time code**: `pnpm publish --otp=<code>`, or use a granular token that is allowed to bypass 2FA.
+   Afterwards run `node scripts/verify-published.mjs` to read back the version, `engines.dsh`, keywords and tarball contents.
 3. Add the `dsh-plugin` topic to the GitHub repository (the official discovery mechanism; upstream does not accept
    external pull requests today).
 4. Announce it in the DeepSeek Harness GitHub Discussions.
