@@ -73,11 +73,15 @@ export function registerDoctorTool(ctx: Context, client: GenBoxClient, config: C
         setup = await client.json<Record<string, unknown>>('GET', '/api/setup/status', undefined, exec.signal)
         checks.push(entry('GenBox reachable', 'ok', 'GET /api/setup/status answered'))
       } catch (error) {
+        // The client already reports unreachable hosts as a sentence naming the URL;
+        // do not wrap that in another "cannot reach <url> (" prefix.
+        const reason = (error as Error).message
         checks.push(entry(
           'GenBox reachable',
           'fail',
-          'cannot reach ' + client.baseUrl + ' (' + shorten((error as Error).message, 120) + ')',
-          'Start GenBox or correct baseUrl in the plugin config (see docs/local-dev.md in the plugin repository).',
+          /not answering/i.test(reason) ? reason : 'cannot reach ' + client.baseUrl + ' (' + shorten(reason, 120) + ')',
+          'Start GenBox (https://github.com/liwei9745/GenBox) and point baseUrl at the port it listens on; '
+          + 'section 2 of docs/local-dev.md has the start command.',
         ))
       }
 

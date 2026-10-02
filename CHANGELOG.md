@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- `genbox_doctor` 的「连不上」提示补上 GenBox 上游地址，并去掉重复的 URL 前缀。
+- 新增 `docs/releasing.md`：把两轮真实发布的操作顺序、期望输出与踩过的坑固化下来。
+
 ## 0.1.1 — 2026-10-02
 
 首装引导与更友好的失败信息。
