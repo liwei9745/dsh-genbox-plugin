@@ -227,3 +227,15 @@ OK
 过程中修掉两个真问题：① 本机 ffmpeg 构建**没有 libx264**，于是增加了编码器自动探测
 （libx264 → h264_mf → libopenh264 → mpeg4，可用 `videoEncoder` 强制覆盖）；② concat 分支曾把 ffmpeg
 跑了两遍（分支内一次、公共尾部又一次），已改为只跑一次并正确清理临时目录。
+
+### 第 7 轮（G5b：视频编辑补齐到 11 个操作）
+
+新增 `crop / volume / replace_audio / burn_subtitles / to_gif`。本机 ffmpeg 带 libass，所以字幕是真烧录
+（`subtitles` 滤镜按 cwd 解析路径，代码里把子进程的 cwd 切到字幕文件所在目录再用文件名引用）。
+
+`@
+trim 1.53s | concat 5.04s | speed 1.67s | mute 3s | resize 160x120 | crop 160x120@20,20
+volume 3.02s | replace_audio 2.07s | burn_subtitles 3s | to_gif 1.5s/38582B | extract_frame PNG
+OK (11/11)
+`@
+

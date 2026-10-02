@@ -92,7 +92,7 @@ dsh plugin --profile <profile> add github:<you>/GenBox-dsh
 | `genbox_cutout` | 抠图（需要 GenBox 侧安装 checkpoint） |
 | `genbox_video_generate` | 文生视频 / 图生视频 / 首尾关键帧；改视频用 `i2vid` 或 `keyframes` 再生成 |
 | `genbox_task` | 查询/取消后台任务。生图/生视频都支持 `background: true` 立即返回，再用它收取结果 |
-| `genbox_video_edit` | 本地 ffmpeg 剪辑：trim / concat / speed / mute / resize / extract_frame（不需要 GenBox、不需要 Key） |
+| `genbox_video_edit` | 本地 ffmpeg 剪辑：trim / concat / speed / mute / resize / crop / volume / replace_audio / burn_subtitles / to_gif / extract_frame（不需要 GenBox、不需要 Key） |
 | `genbox_gallery` | 媒体库检索并复制到本地 |
 | `genbox_prompt_optimize` | 提示词优化 |
 

@@ -2,7 +2,7 @@ import { execFile } from 'node:child_process'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { stat } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { basename, dirname, join, resolve } from 'node:path'
 import { promisify } from 'node:util'
 import type { Context } from '@deepseek-ai/cordis'
 import { defineTool } from '@deepseek-ai/dsh-tools'
@@ -11,11 +11,17 @@ import { outputFileName, outputPath, resolveOutputDir } from '../media.js'
 
 const run = promisify(execFile)
 
-async function ffmpegRun(bin: string, args: string[], signal?: AbortSignal | undefined): Promise<void> {
+async function ffmpegRun(
+  bin: string,
+  args: string[],
+  signal?: AbortSignal | undefined,
+  cwd?: string | undefined,
+): Promise<void> {
   try {
     await run(bin, ['-hide_banner', '-loglevel', 'error', '-y', ...args], {
       maxBuffer: 64 * 1024 * 1024,
       ...(signal === undefined ? {} : { signal }),
+      ...(cwd === undefined ? {} : { cwd }),
     })
   } catch (error) {
     const found = error as { stderr?: string; message?: string }
@@ -96,7 +102,7 @@ export function registerVideoEditTool(ctx: Context, config: Config) {
     parameters: {
       operation: {
         type: 'string',
-        enum: ['trim', 'concat', 'speed', 'mute', 'resize', 'extract_frame'],
+        enum: ['trim', 'concat', 'speed', 'mute', 'resize', 'crop', 'volume', 'replace_audio', 'burn_subtitles', 'to_gif', 'extract_frame'],
         required: true,
         description: 'Which edit to perform.',
       },
@@ -110,7 +116,13 @@ export function registerVideoEditTool(ctx: Context, config: Config) {
       endSeconds: { type: 'number', description: 'trim: end offset in seconds.' },
       speed: { type: 'number', description: 'speed: factor between 0.5 and 2.0 (1 keeps the original pace).' },
       width: { type: 'number', description: 'resize: target width in pixels.' },
-      height: { type: 'number', description: 'resize: target height in pixels.' },
+      height: { type: 'number', description: 'resize/crop/to_gif: target height (crop requires it; to_gif derives it).' },
+      x: { type: 'number', description: 'crop: left offset in pixels (default 0).' },
+      y: { type: 'number', description: 'crop: top offset in pixels (default 0).' },
+      fps: { type: 'number', description: 'to_gif: frames per second for the GIF (default 12).' },
+      volume: { type: 'number', description: 'volume: audio gain factor, for example 0.5 or 2.' },
+      audio: { type: 'string', description: 'replace_audio: audio file whose track replaces the video audio.' },
+      subtitles: { type: 'string', description: 'burn_subtitles: path to an .srt/.ass file to render onto the video.' },
       outputDir: { type: 'string', description: 'Directory for the result. Defaults to the plugin outputDir config.' },
     },
     output: {
@@ -137,6 +149,7 @@ export function registerVideoEditTool(ctx: Context, config: Config) {
       let target = ''
       let ffmpegArgs: string[] = []
       let scratchDir = ''
+      let workDir: string | undefined
 
       if (operation === 'trim') {
         target = outputPath(directory, outputFileName('edit_trim', '.mp4'))
@@ -179,6 +192,41 @@ export function registerVideoEditTool(ctx: Context, config: Config) {
         }
         target = outputPath(directory, outputFileName('edit_resize', '.mp4'))
         ffmpegArgs = ['-i', args.input, '-vf', 'scale=' + args.width + ':' + args.height, ...videoCodecArgs, '-c:a', 'copy', target]
+      } else if (operation === 'crop') {
+        if (typeof args.width !== 'number' || typeof args.height !== 'number') {
+          throw new Error('operation=crop needs both width and height.')
+        }
+        const offsetX = typeof args.x === 'number' ? args.x : 0
+        const offsetY = typeof args.y === 'number' ? args.y : 0
+        target = outputPath(directory, outputFileName('edit_crop', '.mp4'))
+        ffmpegArgs = ['-i', args.input, '-vf', 'crop=' + args.width + ':' + args.height + ':' + offsetX + ':' + offsetY, ...videoCodecArgs, '-c:a', 'copy', target]
+      } else if (operation === 'volume') {
+        const gain = typeof args.volume === 'number' ? args.volume : 1
+        target = outputPath(directory, outputFileName('edit_volume', '.mp4'))
+        ffmpegArgs = ['-i', args.input, '-af', 'volume=' + gain, '-c:v', 'copy', target]
+      } else if (operation === 'replace_audio') {
+        if (args.audio === undefined || args.audio === '') throw new Error('operation=replace_audio needs an audio path.')
+        target = outputPath(directory, outputFileName('edit_audio', '.mp4'))
+        ffmpegArgs = ['-i', args.input, '-i', args.audio, '-map', '0:v', '-map', '1:a', '-shortest', '-c:v', 'copy', '-c:a', 'aac', target]
+      } else if (operation === 'burn_subtitles') {
+        if (args.subtitles === undefined || args.subtitles === '') throw new Error('operation=burn_subtitles needs a subtitles path.')
+        const subtitleFile = resolve(args.subtitles)
+        target = outputPath(directory, outputFileName('edit_subs', '.mp4'))
+        // libass resolves the filter path against ffmpeg's cwd, so run it beside the subtitle file.
+        ffmpegArgs = ['-i', resolve(args.input), '-vf', 'subtitles=' + basename(subtitleFile), ...videoCodecArgs, '-c:a', 'copy', target]
+        workDir = dirname(subtitleFile)
+      } else if (operation === 'to_gif') {
+        const fps = typeof args.fps === 'number' ? args.fps : 12
+        const gifWidth = typeof args.width === 'number' ? args.width : 320
+        target = outputPath(directory, outputFileName('edit_gif', '.gif'))
+        if (typeof args.startSeconds === 'number') ffmpegArgs.push('-ss', String(args.startSeconds))
+        if (typeof args.endSeconds === 'number') {
+          const start = typeof args.startSeconds === 'number' ? args.startSeconds : 0
+          ffmpegArgs.push('-t', String(Math.max(0, args.endSeconds - start)))
+        }
+        ffmpegArgs.push('-i', resolve(args.input))
+        ffmpegArgs.push('-vf', 'fps=' + fps + ',scale=' + gifWidth + ':-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse')
+        ffmpegArgs.push('-loop', '0', target)
       } else if (operation === 'extract_frame') {
         target = outputPath(directory, outputFileName('edit_frame', '.png'))
         if (typeof args.startSeconds === 'number') ffmpegArgs.push('-ss', String(args.startSeconds))
@@ -188,7 +236,7 @@ export function registerVideoEditTool(ctx: Context, config: Config) {
       }
 
       try {
-        await ffmpegRun(config.ffmpegPath, ffmpegArgs, signal)
+        await ffmpegRun(config.ffmpegPath, ffmpegArgs, signal, workDir)
       } finally {
         if (scratchDir !== '') await rm(scratchDir, { recursive: true, force: true })
       }
