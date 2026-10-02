@@ -1,44 +1,52 @@
-# 鏈湴寮€鍙戜笌鑱旇皟鐜
+# 本地开发与联调环境
 
-鏈枃璁板綍鍦?`E:\AI\GenBox-dsh` 閲岃窇閫?鎻掍欢 鈫?GenBox"闂幆鐨勬瘡涓€姝ワ紝鍖呭惈涓€涓?*鏈満鐗规湁鐨勭幆澧冨潙**鍙婂叾淇銆?
-## 1. 渚濊禆
+本文记录在 `E:\AI\GenBox-dsh` 里跑通「插件 → GenBox」闭环的每一步，包含本机特有的**环境坑**及其修复。
 
-| 缁勪欢 | 鐗堟湰 | 澶囨敞 |
+## 1. 依赖
+
+| 组件 | 版本 | 备注 |
 |---|---|---|
 | Node | v24.13.1 | |
-| pnpm | 閫氳繃 `corepack pnpm` 浣跨敤 | 鏈満娌℃湁鍏ㄥ眬 pnpm |
-| Python | **3.11.15**锛坲v 绠＄悊锛?| 鏈満榛樿 `python` 鏄?3.14.3锛孏enBox 閽夌殑 pydantic 2.13 / pillow 12.3 鏈湪 3.14 涓婇獙璇侊紝**涓嶈鐢ㄥ畠** |
-| GenBox | v2.6.12锛坢aster `02ce25e`锛?| `upstream/GenBox` |
+| pnpm | 通过 `corepack pnpm` 使用 | 本机没有全局 pnpm |
+| Python | **3.11.15**（uv 管理） | 本机默认 `python` 是 3.14.3，GenBox 钉的 pydantic 2.13 / pillow 12.3 未在 3.14 上验证，**不要用它** |
+| GenBox | v2.6.12（master `02ce25e`） | `upstream/GenBox` |
 
-## 2. 鍚姩 GenBox锛堝紑鍙戞ā寮忥級
+## 2. 启动 GenBox（开发模式）
 
 ```powershell
-# 涓€娆℃€э細寤?venv 骞惰渚濊禆
+# 一次性：建 venv 并装依赖
 cd E:\AI\GenBox-dsh\upstream\GenBox
 uv venv --python 3.11 .venv
 uv pip install --python .venv\Scripts\python.exe -r requirements.txt
 
-# 姣忔鍚姩锛歞ev 妯″紡 + 8892 绔彛
+# 每次启动：dev 模式 + 8892 端口
 $env:APP_MODE='dev'; $env:GENBOX_PORT='8892'; $env:GENBOX_NO_BROWSER='1'
 .\.venv\Scripts\python.exe main.py
 ```
 
-- `APP_MODE=dev` 鏃?**涓嶉渶瑕?`X-Admin-Key`**锛屼笖 uvicorn 鍙粦瀹?`127.0.0.1`锛坢ain.py:9140锛夈€?- `APP_MODE` 缂虹渷鏄?`prod`锛屾鏃跺繀椤绘湁 `ADMIN_KEY`锛屽惁鍒欏惎鍔ㄧ洿鎺ヨ闃绘柇锛坢ain.py:9128锛夈€?- 婧愮爜杩愯涓嶄細鑷姩寮€娴忚鍣紙鍙湁褰?`sys.frozen` 涓虹湡鏃舵墠浼氾紝main.py:9178锛夈€?
-## 3. 鈿狅笍 鏈満鐜鍧戯細NO_PROXY 閲岀殑 `[::1]` 浼氭墦宕?httpx
+- `APP_MODE=dev` 时**不需要 `X-Admin-Key`**，且 uvicorn 只绑定 `127.0.0.1`。
+- `APP_MODE` 缺省是 `prod`，此时必须有 `ADMIN_KEY`，否则启动直接被阻断。
+- 源码运行不会自动开浏览器（只有 `sys.frozen` 为真时才会）。
 
-**鐜拌薄**锛氫换浣曚竴娆＄敓鍥鹃兘澶辫触锛岄敊璇槸
+## 3. ⚠️ 本机环境坑：`NO_PROXY` 里的 `[::1]` 会打崩 httpx
+
+**现象**：任何一次生图都失败，错误是
 
 ```
-[Mock OpenAI] 鎵€鏈夌鐐瑰潎澶辫触: 绔偣 1 [FAILED]: [Mock OpenAI] Invalid port: ':1]'
+[Mock OpenAI] 所有端点均失败: 端点 1 [FAILED]: [Mock OpenAI] Invalid port: ':1]'
 ```
 
-**鏍瑰洜**锛欴SH 瀹夸富杩涚▼鍚戝瓙杩涚▼瀵煎嚭浜?
+**根因**：DSH 宿主进程向子进程导出了
+
 ```
 NO_PROXY=169.254.198.80,172.17.0.1,192.168.200.195,.local,localhost,127.0.0.1,::1,[::1]
 ```
 
-CPython 鐨?`urllib.request.getproxies()` 浼氭妸杩欎簺鏉＄洰鍘熸牱鏀捐繘 `no` 閿紝`httpx` 0.28 鍦ㄦ瀯寤?`AsyncClient` 鏃舵妸 `[::1]` 褰?`host:port` 瑙ｆ瀽锛屾姏 `InvalidURL: Invalid port: ':1]'`銆?*杩欒窡 mock provider 鏃犲叧**鈥斺€斿畠鍦?httpx 瀹㈡埛绔瀯閫犻樁娈靛氨宕╋紝瀵逛换浣曠湡瀹?provider 涓€鏍蜂細宕┿€?
-**淇**锛堝彧褰卞搷鏈?venv锛屼笉鏀?GenBox 浠ｇ爜锛夛細鍦?`.venv\Lib\site-packages\sitecustomize.py` 閲屾妸甯︽柟鎷彿鐨勬潯鐩墧闄わ細
+CPython 的 `urllib.request.getproxies()` 会把这些条目原样放进 `no` 键，`httpx` 0.28 在构造
+`AsyncClient` 时把 `[::1]` 当 `host:port` 解析，抛 `InvalidURL: Invalid port: ':1]'`。
+**这跟 mock provider 无关**——它在 httpx 客户端构造阶段就崩，对任何真实 provider 一样会崩。
+
+**修复**（只影响本 venv，不改 GenBox 代码）：在 `.venv\Lib\site-packages\sitecustomize.py` 里把带方括号的条目剔除：
 
 ```python
 import os
@@ -49,56 +57,78 @@ for name in ("NO_PROXY", "no_proxy"):
     os.environ[name] = ",".join(p for p in value.split(",") if not p.strip().startswith("["))
 ```
 
-> 杩欐槸鐜渚?workaround锛屼笉灞炰簬鎻掍欢浜や粯鐗┿€傛洿鏍规湰鐨勪慨娉曟槸 GenBox 鍦ㄦ湭閰嶇疆浠ｇ悊鏃剁敤 `httpx.AsyncClient(trust_env=False)`锛屾垨鑰呬笂娓?httpx 淇?no_proxy 瑙ｆ瀽銆?
-## 4. 鏃?key 鐨勭鍒扮鑱旇皟锛坢ock provider锛?
-涓嶈姳閽便€佷笉闇€瑕佷换浣?API Key 灏辫兘楠岃瘉鏁存潯閾捐矾锛?
-```powershell
-# a) 璧蜂竴涓?OpenAI 鍏煎鐨勫亣鍥惧簥锛堢敤 venv 閲岀殑 Pillow锛屾寜璇锋眰灏哄杩斿洖绾壊 PNG锛?E:\AI\GenBox-dsh\upstream\GenBox\.venv\Scripts\python.exe E:\AI\GenBox-dsh\scripts\mock-openai-image.py
+> 这是环境侧 workaround，不属于插件交付物。更根本的修法是 GenBox 在未配置代理时用
+> `httpx.AsyncClient(trust_env=False)`，或上游修复 no_proxy 解析。
 
-# b) 鎶婂畠娉ㄥ唽鎴?GenBox 鐨?image provider
+## 4. 免 Key 的端到端联调（mock provider）
+
+不花钱、不需要任何 API Key 就能验证整条链路：
+
+```powershell
+# a) 起一个 OpenAI 兼容的假图床（用 venv 里的 Pillow，按请求尺寸返回纯色 PNG）
+E:\AI\GenBox-dsh\upstream\GenBox\.venv\Scripts\python.exe E:\AI\GenBox-dsh\scripts\mock-openai-image.py
+
+# b) 把它注册成 GenBox 的 image provider
 $body = @{ id='mock-openai'; name='Mock OpenAI'; type='image'; api_key='sk-mock';
            base_url='http://127.0.0.1:8899'; model='mock-image-1'; models=@('mock-image-1');
            size='512x512'; enabled=$true; capabilities=@{ t2i=$true; i2i=$true };
            endpoint_type='openai' } | ConvertTo-Json -Depth 5
 Invoke-RestMethod -Uri 'http://127.0.0.1:8892/api/providers' -Method POST -Body $body -ContentType 'application/json'
-```
 
-鐒跺悗璺戞彃浠剁骇楠岃瘉锛?
-```powershell
+# c) 跑插件级验证
 cd E:\AI\GenBox-dsh
-corepack pnpm run build
-node scripts\verify-tools.mjs
+corepack pnpm install; corepack pnpm run build
+node scripts\verify-all.mjs
 ```
 
-鏈熸湜杈撳嚭锛歚genbox_image_generate` 涓?`genbox_image_edit` 閮芥槸 `completed`锛屽浘鐗囪惤鍦?`.genbox-out\` 涓嬨€?
-## 5. 鐪熷疄 provider
+`verify-all.mjs` 会在缺少前置条件时如实 SKIP：GenBox 没起时只跑不需要它的套件。
 
-鍦?GenBox 鐣岄潰锛坄http://127.0.0.1:8892`锛夐噷閰嶇疆 provider 涓?Key锛屾垨澶嶇敤鐜版湁 `storage/providers.json`銆傛彃浠朵晶涓嶉渶瑕佹敼浠讳綍涓滆タ锛歚genbox_providers` 浼氬垪鍑哄凡鍚敤鐨?provider銆?
-## 6. 鎻掍欢绾ч獙璇佽剼鏈?
-| 鑴氭湰 | 浣滅敤 |
+## 5. 真实 provider
+
+在 GenBox 界面（`http://127.0.0.1:8892`）里配置 provider 与 Key，或复用现有 `storage/providers.json`。
+插件侧不需要改任何东西：`genbox_providers` 会列出已启用的 provider。
+
+## 6. 插件级验证脚本
+
+| 脚本 | 作用 |
 |---|---|
-| `scripts/verify-plugin.mjs` | 鏈€灏忓姞杞介獙璇侊細娉ㄥ唽 `genbox_health` 骞惰皟鐢ㄧ湡瀹?GenBox |
-| `scripts/verify-tools.mjs` | 绔埌绔細鐢熷浘 + 鏀瑰浘锛坕2i锛夛紝鏍￠獙鏂囦欢钀界洏涓庢覆鏌?|
-| `scripts/mock-openai-image.py` | OpenAI 鍏煎鍋囧浘搴婏紙`/v1/images/generations` 涓?`/v1/images/edits`锛?|
-| `scripts/probe-httpx.py` | 璇婃柇 httpx 浠ｇ悊闂 |
-## 7. 鎶婃彃浠惰杩涗竴涓?DSH profile锛堝凡瀹炴祴锛?
-`dsh plugin` 鍐呴儴浼氳皟鐢ㄧ湡姝ｇ殑 `pnpm`锛屽彧鏈?`corepack` 鏄笉澶熺殑銆傛湰鏈哄缓浜嗕竴涓浆鍙?shim锛?
+| `scripts/verify-all.mjs` | **入口**：跑全部套件，缺前置条件就 SKIP，最后汇总 PASS/FAIL |
+| `scripts/verify-annotate.mjs` | 批注渲染（纯 JS PNG 编码器）与坐标契约 |
+| `scripts/verify-video-edit.mjs` | 本地 ffmpeg 的 11 种剪辑操作 |
+| `scripts/verify-doctor.mjs` | 自检工具的输出与判定 |
+| `scripts/verify-tools.mjs` | 生图 + 改图端到端（需 GenBox + mock provider） |
+| `scripts/verify-background.mjs` / `verify-media.mjs` / `verify-gallery-filters.mjs` | 后台任务、图库与提示词、图库过滤 |
+| `scripts/verify-precision.mjs` | 精准改图批注端到端 |
+| `scripts/verify-presentation.mjs` | UI 渲染意图契约（12 项断言） |
+| `scripts/verify-onboarding.mjs` | 首装引导：工作台工具 + doctor 的 next-steps |
+| `scripts/verify-native-jobs.mjs` | 实验性 `ctx.jobs` 集成（桩 registry） |
+| `scripts/mock-openai-image.py` | OpenAI 兼容假图床（`/v1/images/generations` 与 `/v1/images/edits`） |
+| `scripts/probe-httpx.py` | 诊断 httpx 代理问题 |
+
+## 7. 把插件装进一个 DSH profile（已实测）
+
+`dsh plugin` 内部会调用真正的 `pnpm`，只有 `corepack` 是不够的。本机建了一个转接 shim：
+
 ```powershell
 # C:\Users\18722\AppData\Roaming\npm\pnpm.cmd
 @echo off
 corepack pnpm %*
 ```
 
-鐒跺悗寤轰竴涓?*鐙珛** profile锛堜笉瑕佸姩姝ｅ湪鐢ㄧ殑 `desktop`锛夛細
+然后建一个**独立** profile（不要动正在用的 `desktop`）：
 
 ```powershell
-dsh --profile genbox-dev --from-default-profile web     # 浠庨殢闄勬ā鏉垮垵濮嬪寲
-dsh plugin --profile genbox-dev add E:/AI/GenBox-dsh    # 瑁呮垚鏈?bundle
+dsh --profile genbox-dev --from-default-profile web     # 从随附模板初始化
+dsh plugin --profile genbox-dev add E:/AI/GenBox-dsh    # 装成本地 bundle
 dsh --profile genbox-dev --dump-config | Select-String genbox
-dsh --profile genbox-dev --port 3099                    # 瀹炴満鍚姩
+dsh --profile genbox-dev --port 3099                    # 实机启动
 ```
 
-- 鍥犱负鍖呭０鏄庝簡 `dsh.bundle`锛宍dsh plugin add` 浼氳嚜鍔ㄦ妸瀹冭拷鍔犺繘 `dsh.profile.bundles`銆?- `--dump-config` 閲屽簲鍑虹幇 `# == dsh-genbox-plugin` 灞備笌 `- id: genbox` 琛屻€?- pnpm 浼氳鍛?linked 鍖呬笉浠庣洰鏍?`node_modules` 瑙ｆ瀽 peer锛涙湰浠撳簱鑷甫鍚岀増鏈?devDependencies锛岃繍琛屾湡澶熺敤銆?*姝ｅ紡鍒嗗彂璧?npm 瀹夎鏃讹紝peer 浼氫粠 profile 鐨?`node_modules` 姝ｅ父瑙ｆ瀽**銆?- 瑕佽杩?Desktop锛坄--profile desktop`锛夐渶瑕侀噸鍚?DSH NEXT 鎵嶇敓鏁堛€?
+- 因为包声明了 `dsh.bundle`，`dsh plugin add` 会自动把它追加进 `dsh.profile.bundles`。
+- `--dump-config` 里应出现 `# == dsh-genbox-plugin` 层与 `- id: genbox` 行。
+- 从 npm 安装（`dsh plugin add dsh-genbox-plugin`）时，peer 会从 profile 的 `node_modules` 正常解析。
+- 要装进 Desktop（`--profile desktop`）需要重启 DSH NEXT 才生效；该 profile 由 Electron 应用独占管理，CLI 拒绝写入。
+
 ## 8. 已知环境问题：构建目录被系统收走权限
 
 **现象**：`pnpm run build` 报 `拒绝访问。 (os error 5)`（rolldown 的 `--clean` 删不掉旧输出），
@@ -113,13 +143,13 @@ PATH=E:\AI\GenBox-dsh\lib
 VERDICT=PRECONDITION     REPAIR_REFUSED (needs WRITE_DAC)
 ```
 
-也就是说这个目录的所有者变成了「管理员组」，当前用户没有任何权限，脚本也就无法自动修权限。
+这个目录的所有者变成了「管理员组」，当前用户没有任何权限，脚本也就无法自动修权限。
 
-**应急绕过**（不需要管理员，利用父目录的删除子项权限）：
+**应急绕过**：`scripts/rebuild.ps1` 会自动检测这种情况（输出目录里的文件所有者不是当前用户时），
+把它改名搬走再构建——因为仓库根目录给了当前用户删除子项的权限，搬走不需要管理员：
 
 ```powershell
-Rename-Item 'E:\AI\GenBox-dsh\lib' 'lib-locked-<日期>'   # 把它搬开
-pnpm run build                                              # 重新生成一个属于你的 lib
+powershell -File .\scripts\rebuild.ps1
 ```
 
 **彻底清理**（需要管理员权限的 PowerShell）：
@@ -131,10 +161,10 @@ Remove-Item -Recurse -Force 'E:\AI\GenBox-dsh\lib-locked-<日期>'
 ```
 
 诊断原始记录保存在 `.lab/acl-report/acl-report-*.jsonl`（已 gitignore）。
+
 ## 9. 推送到 GitHub 需要走代理
 
-本机访问 `github.com` 必须经过系统代理（Clash 在 `127.0.0.1:7897`），但 git 默认不读系统代理，
-于是 `git push` 会以 `Recv failure: Connection was reset` 失败。给本仓库配上代理即可：
+本机访问 `github.com` 有时会被重置（`Recv failure: Connection was reset`），走系统代理（Clash 在 `127.0.0.1:7897`）更稳：
 
 ```powershell
 cd E:\AI\GenBox-dsh
@@ -145,6 +175,7 @@ git push -u origin main
 
 推送凭据不要在 URL 里带 token（失败时 git 会把整条 URL 打到终端上，等于泄露）。
 `scripts/publish.mjs` 现在改用 `http.extraheader` 传递凭据。
+
 ## 10. GitHub CLI（便携安装，不改系统）
 
 winget 在这台机器上连不上源，所以 `gh` 用便携包安装：下载 GitHub 官方的
@@ -157,7 +188,7 @@ winget 在这台机器上连不上源，所以 `gh` 用便携包安装：下载 
 E:\AI\tools\gh\bin\gh.exe auth login      # GitHub.com -> HTTPS -> Login with a web browser
 ```
 
-**临时代理**（只对当前这个终端窗口有效，关掉即失效，不写任何配置文件）：
+**临时代理**（只对当前终端窗口有效，关掉即失效，不写任何配置文件）：
 
 ```powershell
 $env:HTTP_PROXY = 'http://127.0.0.1:7897'
