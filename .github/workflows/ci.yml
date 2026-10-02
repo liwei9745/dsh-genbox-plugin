@@ -19,7 +19,9 @@ jobs:
       - run: corepack pnpm install --no-frozen-lockfile
       - run: corepack pnpm run typecheck
       - run: corepack pnpm run build
+      # The runner image does not always ship ffmpeg; install it so the local
+      # video-editing suite runs for real instead of skipping.
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
       # One runner for every suite. Suites that need a live GenBox are reported
-      # as SKIP here; the annotation renderer and the ffmpeg video editor run for
-      # real because the runners ship ffmpeg.
+      # as SKIP; everything else runs against the build output.
       - run: node scripts/verify-all.mjs

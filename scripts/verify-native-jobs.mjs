@@ -45,7 +45,10 @@ checks.push(['nativeJobs=false returns a GenBox task id', typeof offResult.taskI
 const on = load(true)
 const started = Date.now()
 const onResult = await on.tool.execute({ prompt: 'registry path', provider: 'mock-video', background: true }, exec)
-checks.push(['returns immediately with a DSH job id', onResult.jobId === 'genbox-video-1' && Date.now() - started < 5000])
+// Assert on the state instead of a stopwatch: wall-clock thresholds turned this
+// into a flake when the mock provider serialises two video tasks in a row.
+checks.push(['returns immediately with a DSH job id', onResult.jobId === 'genbox-video-1' && onResult.status === 'queued'])
+console.log('  (the open call returned in ' + (Date.now() - started) + 'ms)')
 checks.push(['registers exactly one job', on.calls.length === 1])
 const spec = on.calls[0]
 checks.push(['job kind is genbox-video', spec !== undefined && spec.kind === 'genbox-video'])
