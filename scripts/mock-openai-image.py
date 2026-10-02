@@ -34,6 +34,23 @@ def canvas_from(text: str) -> tuple[int, int]:
     return 1024, 1024
 
 
+def multipart_images(raw: bytes, content_type: str) -> list[bytes]:
+    """Pull the uploaded image payloads out of a multipart/form-data body."""
+    marker = content_type.split("boundary=")[-1].strip().strip('"')
+    if not marker:
+        return []
+    found = []
+    for part in raw.split(("--" + marker).encode()):
+        if b"\r\n\r\n" not in part:
+            continue
+        head, body = part.split(b"\r\n\r\n", 1)
+        if b"filename=" in head or b'name="image' in head:
+            payload = body.rstrip(b"\r\n")
+            if payload:
+                found.append(payload)
+    return found
+
+
 class Handler(BaseHTTPRequestHandler):
     def _reply_json(self, payload: dict) -> None:
         body = json.dumps(payload).encode("utf-8")
@@ -86,7 +103,16 @@ class Handler(BaseHTTPRequestHandler):
                 except Exception:
                     pass
             else:
+                # An edits request must answer with the same canvas as its input,
+                # otherwise GenBox's strict size policy rejects the result.
                 width, height = canvas_from(text)
+                uploads = multipart_images(raw, self.headers.get("Content-Type") or "")
+                for payload in uploads[:1]:
+                    try:
+                        with Image.open(io.BytesIO(payload)) as source:
+                            width, height = source.size
+                    except Exception:
+                        pass
 
             image = Image.new("RGB", (width, height), (24, 118, 210))
             buffer = io.BytesIO()
