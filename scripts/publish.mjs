@@ -12,19 +12,28 @@ const NAME = 'dsh-genbox-plugin'
 const TOPICS = ['dsh-plugin', 'deepseek-harness', 'genbox', 'cordis-plugin', 'image-generation', 'video-generation']
 const DESCRIPTION = 'DeepSeek Harness tools for GenBox: image generation/editing and video generation through a local GenBox server.'
 const execute = process.argv.includes('--execute')
+// Windows ships npm as a .cmd shim, which execFileSync cannot launch without the extension.
+const NPM = process.platform === 'win32' ? 'npm.cmd' : 'npm'
 
-function run(command, args, options) {
-  const settings = { encoding: 'utf8', stdio: options && options.capture ? 'pipe' : 'inherit' }
-  return execFileSync(command, args, settings)
+// Node refuses to spawn .cmd shims without a shell, so every call goes through one.
+function quote(arg) {
+  const value = String(arg)
+  return /[\s"]/.test(value) ? '"' + value.replace(/"/g, '\\"') + '"' : value
+}
+
+function run(command, args) {
+  execFileSync(command, args.map(quote), { encoding: 'utf8', stdio: 'inherit', shell: true })
 }
 
 function tryRun(command, args) {
   try {
-    return { ok: true, output: String(execFileSync(command, args, { encoding: 'utf8', stdio: 'pipe' })).trim() }
+    return { ok: true, unusable: false, output: String(execFileSync(command, args.map(quote), { encoding: 'utf8', stdio: 'pipe', shell: true })).trim() }
   } catch (error) {
+    const code = error.code ?? ''
     const stdout = error.stdout ? String(error.stdout).trim() : ''
     const stderr = error.stderr ? String(error.stderr).trim() : ''
-    return { ok: false, output: (stderr || stdout || String(error.message)).split('\n')[0] }
+    const unusable = code === 'ENOENT' || code === 'EINVAL' || code === 'EPERM'
+    return { ok: false, unusable, code, output: (stderr || stdout || String(error.message)).split('\n')[0] }
   }
 }
 
@@ -40,19 +49,28 @@ const branch = tryRun('git', ['rev-parse', '--abbrev-ref', 'HEAD'])
 record('on a branch', branch.ok, branch.output)
 
 const remote = tryRun('git', ['remote', 'get-url', 'origin'])
-record('origin remote', remote.ok, remote.ok ? remote.output : 'not set yet (the script will add it)')
+record('origin remote', true, remote.ok ? remote.output : 'not set - gh repo create will add it')
 
-const pack = tryRun('npm', ['pack', '--dry-run', '--json'])
+const pack = tryRun(NPM, ['pack', '--dry-run', '--json'])
 let packedFiles = []
 if (pack.ok) {
-  try { packedFiles = JSON.parse(pack.output)[0].files.map((f) => f.path) } catch { packedFiles = [] }
+  // 'prepare' may print build output before the JSON payload; keep the last JSON array.
+  const start = pack.output.indexOf('[')
+  const end = pack.output.lastIndexOf(']')
+  try {
+    if (start !== -1 && end > start) packedFiles = JSON.parse(pack.output.slice(start, end + 1))[0].files.map((f) => f.path)
+  } catch { packedFiles = [] }
 }
 const hasLib = packedFiles.includes('lib/index.js')
 const hasPatch = packedFiles.includes('cordis.patch.yml')
 record('tarball contains lib/index.js + cordis.patch.yml', hasLib && hasPatch, packedFiles.join(', ') || pack.output)
 
-const npmName = tryRun('npm', ['view', NAME, 'version'])
-record('npm name is still free', !npmName.ok, npmName.ok ? ('taken: ' + npmName.output) : '404 as expected')
+const npmName = tryRun(NPM, ['view', NAME, 'version'])
+record(
+  'npm name is still free',
+  !npmName.ok && !npmName.unusable,
+  npmName.ok ? ('taken: ' + npmName.output) : (npmName.unusable ? ('npm unusable: ' + npmName.output) : '404 as expected'),
+)
 
 const ghVersion = tryRun('gh', ['--version'])
 record('gh installed', ghVersion.ok, ghVersion.ok ? ghVersion.output.split('\n')[0] : 'install: winget install GitHub.cli')
@@ -60,7 +78,7 @@ record('gh installed', ghVersion.ok, ghVersion.ok ? ghVersion.output.split('\n')
 const ghAuth = ghVersion.ok ? tryRun('gh', ['auth', 'status']) : { ok: false, output: 'gh missing' }
 record('gh authenticated', ghAuth.ok, ghAuth.ok ? 'yes' : 'run: gh auth login')
 
-const npmAuth = tryRun('npm', ['whoami'])
+const npmAuth = tryRun(NPM, ['whoami'])
 record('npm authenticated', npmAuth.ok && npmAuth.output !== '', npmAuth.ok ? npmAuth.output : 'run: npm login (or set NPM_TOKEN)')
 
 // ---------------------------------------------------------------- report
@@ -102,7 +120,7 @@ if (blockers.length > 0) {
 console.log('')
 run('gh', ['repo', 'create', NAME, '--public', '--source', '.', '--push', '--description', DESCRIPTION])
 run('gh', ['repo', 'edit', ...TOPICS.flatMap((topic) => ['--add-topic', topic])])
-run('npm', ['publish', '--access', 'public'])
+run(NPM, ['publish', '--access', 'public'])
 console.log('')
 console.log('published. verify with:')
 console.log('  npm view ' + NAME + ' version')
