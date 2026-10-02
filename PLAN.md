@@ -276,3 +276,11 @@ ffmpeg 与 ffprobe"，每条失败都附可执行的修复建议。目的是让�
   [fail] Providers
 OK
 ```
+### 第 10 轮（对外可读性 + CI 真验证）
+
+- 新增 [README.en.md](README.en.md)（英文版，npm 页与 GitHub 首页用），中文 README 顶部互相链接。
+- CI 从「只做 typecheck+build」升级为**真验证**：加了 `verify-annotate.mjs` 与 `verify-video-edit.mjs` 两步
+  （GitHub runner 自带 ffmpeg，所以本地视频编辑器与批注渲染在每次 push 都会被跑一遍）。
+- 这两个脚本的输出目录改成可移植（`VERIFY_OUT_DIR`，默认 `.genbox-out`），不再硬编码 Windows 路径。
+- 发布预检现状：tarball 现在含 `LICENSE / README.md / README.en.md / cordis.patch.yml / lib/*`，
+  npm 包名仍未被占用；只剩三个账号项（gh 未安装、gh 未登录、npm 未登录）。
