@@ -50,6 +50,31 @@ powershell -File scripts\publish-with-token.ps1 -Execute -NpmOnly
 如果你在 npm 上建一个 **Granular Access Token**（读写该包、勾选 bypass 2FA），也可以交给我发布——
 但请只把它填进上面脚本的交互提示，不要贴进对话里。
 
+## 上游修复台账（GenBox 检出，待 push）
+
+> 这些修复**不在插件仓库内**，而是针对 GenBox 本体（`upstream/GenBox` 检出）。每条都先实测复现、再修、再用真实指针或浏览器断言验收；
+> 明细与根因见 [docs/genbox-pitfalls.md](./docs/genbox-pitfalls.md)，自动化断言见 [docs/browser-checks.md](./docs/browser-checks.md)。
+
+| # | 问题 | 状态 | 验收证据 | 提交 |
+|---|---|---|---|---|
+| 1 | 精准画布右下角抓点**纵向拖动被忽略**（只读 `dx`） | ✅ 已修 | A/B：向下 400→440、向上 400→360；`test_precision_canvas_resize_axis.mjs` | `247f8f8` |
+| 2 | `test_precision_protocol_ui.mjs` 沙箱缺依赖（基线就红） | ✅ 已修 | 沙箱补齐后原断言一字不改通过 | `b4feb2d` |
+| 3 | 生成页纵向分隔条**完全无反应**（flex 到孙节点） | ✅ 已修 | 拖拽前后 delta 全 0 → 643+250=893 → 683+210=893 | `36d9b8a` |
+| 4 | 分隔条只拉伸一侧（下拉留白、上拉裁切） | ✅ 已修 | 总和恒定：893 → 893 → 893 | `dfad9e2` |
+| 5 | 分隔条地板值低于样式表（180/200 vs 220/210） | ✅ 已修 | 1280×800 上拉到底停在 220 | `ddebb6c` |
+| 6 | 画布钻到状态栏下，抓点**指针不可达** | ✅ 已修 | 上限 760→733；命中 `button#precisionCanvasResizeHandle` | `a6664b5` |
+| 7 | 分隔条被 `overflow: auto` 裁到**仅约 4px 可点** | ✅ 已修 | 真实指针拖拽生效（合成事件曾被骗过） | `865ec38` |
+| 8 | 窄视口两栏**溢出 118px** | ✅ 已修 | 839 → 534 ≤ 列 721 | `ca319e7` |
+| 9 | provider 列宽手柄可点区域仅约 4/8px | 📝 记录不改 | 逐像素扫描 714..717 命中；加 `z-index` 无效 | `aed0145`（记录） |
+
+**两条方法论结论**（写进踩坑清单，避免重复踩）：
+
+1. **合成 `dispatchEvent` 会绕过命中测试**——点不到会伪装成能用。因此浏览器断言一律先 `elementFromPoint()` 命中测试，再发真实指针序列。
+2. **`z-index` 不是万能药**：祖先带 `backdrop-filter` 时会自成层叠上下文，子元素提到 `z-index: 30` 也无效（第 6 条）。
+
+**耗时评估**：浏览器套件约 44s（`browser: splitter trades space`），与用户旅程套件（46s）相当，未超出整体量级，
+因此**不做快速/完整拆分**——拆分会增加维护面而不解决实际瓶颈。
+
 ## 节奏
 
 - 每轮只推进一个阶段，并在同一轮内补齐验证脚本。
