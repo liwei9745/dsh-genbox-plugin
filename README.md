@@ -11,6 +11,17 @@
 调研结论与设计见 [PLAN.md](./PLAN.md)；安装、配置与排错见 [docs/install.md](./docs/install.md)；
 本机联调环境（含免 Key 的 mock provider）见 [docs/local-dev.md](./docs/local-dev.md)。
 
+## 30 秒上手
+
+装完之后三步（也可以直接让 agent 替你做）：
+
+1. **打开工作台**：对 agent 说「打开 GenBox 工作台」（它会调 `genbox_open_workbench`），
+   或自己用浏览器打开 **http://127.0.0.1:8892/** —— provider、API Key、设置都在这个界面里。
+2. **自检**：「跑一下 GenBox 自检」（`genbox_doctor`）—— 它会逐项告诉你还缺什么，并给出下一步清单。
+3. **开始用**：直接说「用 GenBox 画一只在雪地里的柴犬」。
+
+> GenBox 没在跑时，第 1 步会明确告诉你它没应答，并指向 [docs/local-dev.md](./docs/local-dev.md) 的启动命令。
+
 ## 形态
 
 ```
@@ -90,6 +101,7 @@ dsh --profile <profile> --dump-config | Select-String genbox   # 确认插件层
 | 工具 | 作用 |
 |---|---|
 | `genbox_doctor` | **自检**：可达性、认证模式、provider/Key 就绪、输出目录可写、ffmpeg 是否可用，并给出修复建议 |
+| `genbox_open_workbench` | 打印/打开 GenBox 工作台（首装后的第一步） |
 | `genbox_health` | 探测 GenBox 是否在线 |
 | `genbox_providers` | 列出 provider / 模型 / 能力（调用前先查能力） |
 | `genbox_image_generate` | 文生图，可多 provider 并排、多张、指定尺寸质量 |

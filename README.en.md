@@ -10,6 +10,17 @@ Design notes live in [PLAN.md](./PLAN.md); install, configuration and troublesho
 the local development environment (including a zero-API-key mock provider) in [docs/local-dev.md](./docs/local-dev.md)
 (Chinese); the English install and troubleshooting guide is [docs/install.en.md](./docs/install.en.md).
 
+## Quick start (30 seconds)
+
+Three steps after installing - the agent can do all of them for you:
+
+1. **Open the workbench**: ask the agent to "open the GenBox workbench" (it calls `genbox_open_workbench`),
+   or open **http://127.0.0.1:8892/** yourself. Providers, API keys and settings live in that UI.
+2. **Self-check**: "run the GenBox doctor" (`genbox_doctor`) - it lists what is missing and a next-steps checklist.
+3. **Use it**: just say "draw a shiba inu in the snow with GenBox".
+
+> When GenBox is not running, step 1 says so explicitly and points at the start command in [docs/local-dev.md](./docs/local-dev.md).
+
 ## Shape
 
 ```
@@ -74,6 +85,7 @@ dsh --profile <profile> --dump-config | Select-String genbox   # confirm the plu
 | Tool | Purpose |
 |---|---|
 | `genbox_doctor` | self-check: reachability, auth mode, provider/key readiness, writable output directory, ffmpeg presence, with fix hints |
+| `genbox_open_workbench` | Print/open the GenBox workbench (the first thing to do after installing) |
 | `genbox_health` | is GenBox reachable |
 | `genbox_providers` | list providers, models and declared capabilities |
 | `genbox_image_generate` | text to image; several providers side by side, multiple images, size and quality |

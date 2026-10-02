@@ -16,10 +16,10 @@ GenBox 的 `precision_edit` 是本插件里**唯一需要用户显式授权**的
 
 在 GenBox 界面里找到该 provider 的模型能力确认入口，或者直接在 API 上确认：
 
-`~powershell
+```powershell
 $body = @{ model = '<model-id>'; enabled = $true; confirmed = $true } | ConvertTo-Json
 Invoke-RestMethod -Uri 'http://127.0.0.1:8892/api/providers/<provider-id>/precision-capability' -Method POST -Body $body -ContentType 'application/json'
-`~
+```
 
 注意：
 
@@ -50,19 +50,19 @@ Invoke-RestMethod -Uri 'http://127.0.0.1:8892/api/providers/<provider-id>/precis
 
 ## 本地怎么验证（不需要真 Key）
 
-`~powershell
+```powershell
 python scripts/mock-openai-image.py     # 假图床：/images/edits 返回与输入同尺寸的 PNG
 node scripts/verify-precision.mjs       # 脚本先确认 mock 模型的能力，再走完整链路
-`~
+```
 
 期望输出：
 
-`~
+```
   [ok]   capability confirmed for mock-image-1 -> enabled
   [ok]   local-path guard
   [ok]   model guard
   [ok]   annotated precision_edit completed -> ...png (885B)
 OK
-`~
+```
 
 这也是 [scripts/verify-all.mjs](../scripts/verify-all.mjs) 里的一个套件。

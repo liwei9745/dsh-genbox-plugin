@@ -10,6 +10,7 @@ import { registerProviderTools } from './tools/providers.js'
 import { registerTaskTool } from './tools/task.js'
 import { registerVideoEditTool } from './tools/video-edit.js'
 import { registerVideoTools } from './tools/video.js'
+import { registerWorkbenchTool } from './tools/workbench.js'
 
 export const name = 'genbox'
 
@@ -50,4 +51,5 @@ export function apply(ctx: Context, config: GenBoxConfig) {
   registerTaskTool(ctx, client, config)
   registerVideoEditTool(ctx, config)
   registerMediaTools(ctx, client, config)
+  registerWorkbenchTool(ctx, client, config)
 }

@@ -12,12 +12,12 @@
 
 ## 怎么开
 
-`~yaml
+```yaml
 - id: genbox
   name: dsh-genbox-plugin
   config:
     nativeJobs: true      # 默认 false
-`~
+```
 
 前提是你的组合里加载了后台任务能力（DSH 默认的 `dsh-jobs-local` + `dsh-tool-jobs` 就有）。
 
@@ -25,7 +25,7 @@
 
 `dsh-tool-bash` 是官方参考实现，它这样用：
 
-`~js
+```js
 registry.start({
   kind: "bash",
   label: args.command,
@@ -36,7 +36,7 @@ registry.start({
     cancel: (reason) => hooks.cancel(reason),
   }),
 })
-`~
+```
 
 即：`start()` 返回 **job id 字符串**；`run()` 必须返回 `{ done, cancel }`。
 

@@ -23,6 +23,8 @@ type DoctorReport = {
   ok: boolean
   baseUrl: string
   checks: DoctorCheck[]
+  /** What a freshly installed user should do next. */
+  nextSteps: string[]
 }
 
 function entry(name: string, status: DoctorStatus, detail: string, hint?: string): DoctorCheck {
@@ -54,6 +56,11 @@ export function registerDoctorTool(ctx: Context, client: GenBoxClient, config: C
         for (const check of report.checks) {
           lines.push(label(check.status) + ' ' + check.name + ': ' + check.detail)
           if (check.hint !== undefined) lines.push('          fix: ' + check.hint)
+        }
+        if (report.nextSteps.length > 0) {
+          lines.push('')
+          lines.push('next steps:')
+          for (const step of report.nextSteps) lines.push('  - ' + step)
         }
         return [{ type: 'text' as const, text: lines.join('\n') }]
       },
@@ -139,10 +146,16 @@ export function registerDoctorTool(ctx: Context, client: GenBoxClient, config: C
         }
       }
 
+      const workbench = client.baseUrl.replace(/\/+$/, '') + '/'
       const report: DoctorReport = {
         ok: checks.every((check) => check.status !== 'fail'),
         baseUrl: client.baseUrl,
         checks,
+        nextSteps: [
+          'Open the workbench to configure providers and API keys: ' + workbench + ' (genbox_open_workbench can launch it)',
+          'Then ask for something concrete, for example "draw a shiba inu in the snow with GenBox".',
+          'Browse what was produced with genbox_gallery; start long jobs with background=true and collect them with genbox_task.',
+        ],
       }
       return report
     },
