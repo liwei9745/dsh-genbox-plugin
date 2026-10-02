@@ -192,12 +192,19 @@ console.log('')
 let owner = ''
 if (!githubReady) {
   console.log('skipping GitHub: no credentials in this shell. Publish to npm now, then re-run with --with-github to create the repository.')
-} else if (GH_TOKEN !== '') {
-  owner = await releaseWithToken(GH_TOKEN)
-  console.log('repository ready: https://github.com/' + owner + '/' + NAME)
 } else {
-  run('gh', ['repo', 'create', NAME, '--public', '--source', '.', '--push', '--description', DESCRIPTION])
-  run('gh', ['repo', 'edit', ...TOPICS.flatMap((topic) => ['--add-topic', topic])])
+  // A GitHub hiccup (missing scope, existing repo, network) must not block the npm release.
+  try {
+    if (GH_TOKEN !== '') {
+      owner = await releaseWithToken(GH_TOKEN)
+      console.log('repository ready: https://github.com/' + owner + '/' + NAME)
+    } else {
+      run('gh', ['repo', 'create', NAME, '--public', '--source', '.', '--push', '--description', DESCRIPTION])
+      run('gh', ['repo', 'edit', ...TOPICS.flatMap((topic) => ['--add-topic', topic])])
+    }
+  } catch (error) {
+    console.error('GitHub step failed, continuing with the npm release: ' + String(error.message).split('\n')[0])
+  }
 }
 
 if (NPM_TOKEN !== '') {
