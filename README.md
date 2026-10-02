@@ -75,6 +75,7 @@ dsh plugin --profile <profile> add github:<you>/GenBox-dsh
 | `genbox_cutout` | 抠图（需要 GenBox 侧安装 checkpoint） |
 | `genbox_video_generate` | 文生视频 / 图生视频 / 首尾关键帧；改视频用 `i2vid` 或 `keyframes` 再生成 |
 | `genbox_task` | 查询/取消后台任务。生图/生视频都支持 `background: true` 立即返回，再用它收取结果 |
+| `genbox_video_edit` | 本地 ffmpeg 剪辑：trim / concat / speed / mute / resize / extract_frame（不需要 GenBox、不需要 Key） |
 | `genbox_gallery` | 媒体库检索并复制到本地 |
 | `genbox_prompt_optimize` | 提示词优化 |
 
@@ -91,6 +92,9 @@ DSH 内置的 `read_image` 看图。
 | `outputDir` | `.genbox` | 生成媒体落盘目录（相对路径按会话工作目录解析） |
 | `pollIntervalMs` | 2000 | 轮询间隔；视频任务会提升到至少 5s |
 | `taskTimeoutMs` | 900000 | 单任务超时 |
+| `ffmpegPath` | `ffmpeg` | 本地视频编辑用的 ffmpeg |
+| `ffprobePath` | `ffprobe` | 媒体探测用的 ffprobe |
+| `videoEncoder` | 空（自动） | 强制视频编码器；空则按 libx264 → h264_mf → libopenh264 → mpeg4 自动选 |
 
 ## 开发
 

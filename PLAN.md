@@ -205,3 +205,25 @@ E:\AI\GenBox-dsh\
 dsh: AUTH: Authentication Fails, Your api key: ****ocal is invalid
 `@
 也就是说：**命令行 profile（包括我开的 3099 实验室）拿到的 API Key 是无效的**；而这个 Desktop 会话本身是正常的。因此"模型 → 工具调用"这一层的端到端验证在当前 CLI 凭据修好之前做不了。可选解法见 [ROADMAP.md](ROADMAP.md)：要么在 CLI 环境配一个有效 Key，要么把插件装进 `desktop` profile 后重启 DSH NEXT（Desktop 的凭据是好的）。
+
+### 第 6 轮（G5a：本地 ffmpeg 视频编辑）
+
+GenBox 没有视频编辑能力，所以这一段由插件自己用本机 ffmpeg 补上：`genbox_video_edit` 支持
+`trim / concat / speed / mute / resize / extract_frame`，不依赖 GenBox，也不需要任何 API Key。
+
+实测（[scripts/verify-video-edit.mjs](scripts/verify-video-edit.mjs)）：
+
+`@
+test clips will use encoder: libopenh264
+trim:   durationSeconds 1.53 (0.5s -> 2s)        FILE-OK
+concat: durationSeconds 5.04 (3s + 2s)           FILE-OK
+speed:  durationSeconds 1.67 (3s @ 2x)           FILE-OK
+mute:   durationSeconds 3                         FILE-OK
+resize: 160x120                                   FILE-OK
+frame:  edit_frame_*.png 14500B                   FILE-OK
+OK
+`@
+
+过程中修掉两个真问题：① 本机 ffmpeg 构建**没有 libx264**，于是增加了编码器自动探测
+（libx264 → h264_mf → libopenh264 → mpeg4，可用 `videoEncoder` 强制覆盖）；② concat 分支曾把 ffmpeg
+跑了两遍（分支内一次、公共尾部又一次），已改为只跑一次并正确清理临时目录。

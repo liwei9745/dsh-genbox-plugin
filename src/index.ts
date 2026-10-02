@@ -7,6 +7,7 @@ import { registerImageToolbox } from './tools/image-extra.js'
 import { registerMediaTools } from './tools/media.js'
 import { registerProviderTools } from './tools/providers.js'
 import { registerTaskTool } from './tools/task.js'
+import { registerVideoEditTool } from './tools/video-edit.js'
 import { registerVideoTools } from './tools/video.js'
 
 export const name = 'genbox'
@@ -43,5 +44,6 @@ export function apply(ctx: Context, config: GenBoxConfig) {
   registerImageToolbox(ctx, client, config)
   registerVideoTools(ctx, client, config)
   registerTaskTool(ctx, client, config)
+  registerVideoEditTool(ctx, config)
   registerMediaTools(ctx, client, config)
 }

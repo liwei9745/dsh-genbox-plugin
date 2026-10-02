@@ -18,7 +18,8 @@
 | G3 真跑 | 真实 provider 端到端 | 用真实 Key 生成一张图、一段视频并落盘 | ⏳ 需要你在 GenBox 配 Key |
 | G4a 非阻塞 | 生图/生视频支持 `background: true` 立即返回 + `genbox_task` 查询/下载/取消 | `scripts/verify-background.mjs`：生图 85ms 返回、随后 settled + 文件落盘；视频同样通过 | ✅ 已完成 |
 | G4b 体验 | UI 卡片（`presentCall`/`presentResult`）、改用 DSH 原生 `ctx.jobs` 后台任务 | 卡片在 Web 端渲染；任务返回原生 jobId | ⬜ 未开始 |
-| G5 扩展 | ffmpeg 视频编辑（裁剪/拼接/变速/字幕）、精准改图批注、抠图 checkpoint 流程 | 各自的端到端脚本 | ⬜ 未开始 |
+| G5a 视频编辑 | `genbox_video_edit`：trim / concat / speed / mute / resize / extract_frame（本地 ffmpeg，补 GenBox 的改视频缺口） | `scripts/verify-video-edit.mjs`：六个操作全部 FILE-OK（trim 1.53s、concat 5.04s、speed 1.67s、resize 160x120、帧 PNG） | ✅ 已完成 |
+| G5b 扩展 | 字幕烧录/音轨混合、精准改图批注、抠图 checkpoint 流程 | 各自的端到端脚本 | ⬜ 未开始 |
 | G6 复用 | 若出现第二个媒体后端，再抽 `dsh-media` Service Definition / Provider / Consumer 三层 | 第二个 provider 无需改工具层 | ⬜ 观察中 |
 
 ## 依赖你（或需要账号）的动作

@@ -14,6 +14,12 @@ export interface Config {
   pollIntervalMs: number
   /** Deadline for a single GenBox task before the tool gives up. */
   taskTimeoutMs: number
+  /** ffmpeg executable used by the local video editor (a name on PATH or an absolute path). */
+  ffmpegPath: string
+  /** ffprobe executable used to inspect media before and after editing. */
+  ffprobePath: string
+  /** Force an ffmpeg video encoder ('' = auto-detect from libx264/h264_mf/libopenh264/mpeg4). */
+  videoEncoder: string
 }
 
 export const Config: Schema<Config> = Schema.object({
@@ -23,4 +29,7 @@ export const Config: Schema<Config> = Schema.object({
   outputDir: Schema.string().default('.genbox'),
   pollIntervalMs: Schema.number().default(2000),
   taskTimeoutMs: Schema.number().default(900000),
+  ffmpegPath: Schema.string().default('ffmpeg'),
+  ffprobePath: Schema.string().default('ffprobe'),
+  videoEncoder: Schema.string().default(''),
 })
