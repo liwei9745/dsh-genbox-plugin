@@ -1,0 +1,9 @@
+# Layer contributed by the dsh-genbox-plugin bundle.
+# Rows reference this package by name so Node resolves the installed code.
+- insert:
+    - id: genbox
+      name: dsh-genbox-plugin
+      config:
+        baseUrl: 'http://127.0.0.1:8892'
+        adminKey: ''
+        outputDir: '.genbox'

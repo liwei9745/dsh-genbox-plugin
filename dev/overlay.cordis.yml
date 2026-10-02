@@ -1,0 +1,8 @@
+# Development overlay: mount the plugin straight from the build output.
+#   dsh --profile genbox-dev --patch E:/AI/GenBox-dsh/dev/overlay.cordis.yml
+- insert:
+    - id: genbox
+      name: 'E:/AI/GenBox-dsh/lib/index.js'
+      config:
+        baseUrl: 'http://127.0.0.1:8892'
+        outputDir: '.genbox'

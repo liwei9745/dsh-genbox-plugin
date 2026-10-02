@@ -1,0 +1,8 @@
+node_modules/
+lib/
+dist/
+upstream/
+.genbox/
+.genbox-out/
+*.tgz
+*.log
