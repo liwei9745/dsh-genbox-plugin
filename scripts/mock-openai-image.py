@@ -7,24 +7,65 @@ Serves, on 127.0.0.1:8899:
 * POST /v1/images/variations - same, for the variations probe.
 * POST /api/v3/contents/generations/tasks - fake Volcengine video task creation.
 * GET  /api/v3/contents/generations/tasks/<id> - immediately "succeeded".
-* GET  /mock.mp4 - a small fake MP4 payload.
+* GET  /mock.mp4 - a real 2-second clip when ffmpeg is available (so a downloaded
+  video can be re-encoded), otherwise a small undecodable placeholder.
 
 No third-party dependencies beyond Pillow.
 """
 import base64
 import io
 import json
+import os
 import re
+import shutil
+import subprocess
+import tempfile
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 from PIL import Image
 
 PORT = 8899
 DEFAULT_SIZE = "1024x1024"
-MP4_BYTES = (
+# Deliberately not decodable: it is what the endpoint falls back to when ffmpeg is
+# missing. A test that only checks "a non-empty .mp4 landed" cannot tell the two
+# apart, which is why the real payload below exists.
+FAKE_MP4 = (
     b"\x00\x00\x00\x18ftypmp42\x00\x00\x00\x00mp42isom"
     b"\x00\x00\x00\x08free" + b"\x00" * 2048
 )
+
+
+def real_mp4_bytes() -> bytes | None:
+    """A tiny *decodable* clip, so a downloaded video survives a re-encode.
+
+    Tests downstream (the local ffmpeg editor, the journey) run real ffmpeg over
+    whatever was downloaded; a fake payload makes them fail for the wrong reason.
+    """
+    ffmpeg = os.environ.get("FFMPEG_PATH", "ffmpeg")
+    if shutil.which(ffmpeg) is None:
+        return None
+    target = os.path.join(tempfile.gettempdir(), "genbox-mock-clip.mp4")
+    if not os.path.exists(target):
+        try:
+            subprocess.run(
+                [
+                    ffmpeg, "-hide_banner", "-loglevel", "error", "-y",
+                    "-f", "lavfi", "-i", "testsrc=size=320x240:rate=12:duration=2",
+                    "-pix_fmt", "yuv420p", "-c:v", "mpeg4", target,
+                ],
+                check=True,
+                timeout=60,
+            )
+        except Exception:
+            return None
+    try:
+        with open(target, "rb") as handle:
+            return handle.read()
+    except OSError:
+        return None
+
+
+MP4_BYTES = real_mp4_bytes() or FAKE_MP4
 
 
 def canvas_from(text: str) -> tuple[int, int]:

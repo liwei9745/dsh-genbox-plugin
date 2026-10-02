@@ -60,6 +60,7 @@ const suites = [
   { name: 'gallery filters', file: 'verify-gallery-filters.mjs', needs: ['genbox'] },
   { name: 'native job registry', file: 'verify-native-jobs.mjs', needs: ['genbox'] },
   { name: 'precision annotations', file: 'verify-precision.mjs', needs: ['genbox'] },
+  { name: 'user journey (generate → edit → video → cut)', file: 'verify-journey.mjs', needs: ['genbox', 'ffmpeg'] },
 ]
 
 const hasGenbox = await genboxUp()

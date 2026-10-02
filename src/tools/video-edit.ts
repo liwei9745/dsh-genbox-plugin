@@ -98,7 +98,9 @@ export function registerVideoEditTool(ctx: Context, config: Config) {
     description:
       'Edit a local video with ffmpeg - no GenBox server or API key needed. Operations: trim (cut a range), concat '
       + '(join clips in order), speed (time stretch), mute (drop the audio track), resize (re-encode to a canvas), '
-      + 'extract_frame (write one frame as PNG). GenBox itself cannot edit video, so this fills that gap locally.',
+      + 'crop (cut a rectangle out), volume (audio gain), replace_audio (swap the audio track), burn_subtitles '
+      + '(render an .srt/.ass onto the picture), to_gif (animated GIF) and extract_frame (write one frame as PNG). '
+      + 'GenBox itself cannot edit video, so this fills that gap locally.',
     parameters: {
       operation: {
         type: 'string',
