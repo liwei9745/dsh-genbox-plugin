@@ -88,3 +88,29 @@ document.elementFromPoint(grip centre) -> button#precisionCanvasResizeHandle
 
 `scripts/browser/measure-splitters.cjs` now asserts exactly that
 (`precision corner grip is reachable`) instead of reporting it as blocked.
+
+## 10. The generate page's panes overflowed the column at narrow widths (**fixed**)
+
+**Symptom:** at 768x900 the column scrolled and the vertical splitter was no longer laid out
+where a pointer could reach it.
+
+**Cause (measured):** the three children of `.generate-center` kept their intrinsic heights -
+canvas row 490 + task monitor 167 + input row 349 = **1006** against a **721** column. The stylesheet
+has a three-row grid rule for this breakpoint (`grid-template-rows: minmax(180px,1fr) 42px` ...
+whose minimum total is only 432), but the computed style reported `display: flex` with
+`flex: 0 0 auto` children - the grid was not in effect, so they grew to their content.
+
+**Fix** (rather than hunting for the rule that overrode the grid, let the two rows share the
+column at this breakpoint):
+
+```css
+@media (max-width: 800px) {
+  #pageGenerate .generate-center > .creator-canvas-row  { flex: 1 1 auto; min-height: 180px; }
+  #pageGenerate .generate-center > .creator-task-monitor { flex: 0 0 auto; }
+  #pageGenerate .generate-center > .creator-input-row   { flex: 1 1 auto; min-height: 210px; }
+}
+```
+
+**Measured:** `490+349=839` (118px of overflow) became `312+222=534` (within the 721px
+column), and the browser assertion went from a reported upstream issue to `[ok]`.
+See the coverage matrix in [browser-checks.en.md](./browser-checks.en.md).

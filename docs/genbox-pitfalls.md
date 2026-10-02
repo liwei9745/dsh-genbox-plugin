@@ -152,3 +152,25 @@ document.elementFromPoint(抓点中心) -> button#precisionCanvasResizeHandle
 
 `scripts/browser/measure-splitters.cjs` 现在就断言这件事（`precision corner grip is reachable`），
 而不是像之前那样报 `covered by div.status-bar` 后跳过。
+
+## 10. 窄视口下生图页两栏溢出（**已修**）
+
+**现象**：768×900 时列内滚动，纵向分隔条不再落在指针可达处。
+
+**根因（实测）**：该断点下 `.generate-center` 的三个子元素各自保持固有高度——
+画布行 490 + 任务监视器 167 + 输入行 349 = **1006**，而列高只有 **721**。
+样式表里本有一个 3 行 grid 规则（`grid-template-rows: minmax(180px,1fr) 42px minmax(210px,250px)`，三者最小合计仅 432），
+但计算样式显示 `display: flex`、子元素 `flex: 0 0 auto`——网格没有生效，于是按内容撑开。
+
+**修法**（不去猜哪条规则覆盖了 grid，直接让两行在窄断点共享列高）：
+
+```css
+@media (max-width: 800px) {
+  #pageGenerate .generate-center > .creator-canvas-row  { flex: 1 1 auto; min-height: 180px; }
+  #pageGenerate .generate-center > .creator-task-monitor { flex: 0 0 auto; }
+  #pageGenerate .generate-center > .creator-input-row   { flex: 1 1 auto; min-height: 210px; }
+}
+```
+
+**实测前后**：两栏 `490+349=839`（溢出 118px）→ `312+222=534`（≤ 列 721）；
+浏览器断言也随之由已知上游问题转为 `[ok]`。覆盖矩阵见 [browser-checks.md](./browser-checks.md)。
