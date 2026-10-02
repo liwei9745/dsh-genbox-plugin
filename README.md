@@ -12,6 +12,7 @@
 
 全部工具的参数速查见 [docs/tools.md](./docs/tools.md)（**由代码自动生成**，不会和实现漂移）；
 与 GenBox 集成的**实测踩坑清单**（含根因与源码位置）见 [docs/genbox-pitfalls.md](./docs/genbox-pitfalls.md)；
+前端**可达性检查覆盖矩阵**（为什么必须"先命中测试再发真实指针"）见 [docs/browser-checks.md](./docs/browser-checks.md)；
 调研结论与设计见 [PLAN.md](./PLAN.md)；**内部结构与如何加工具**见 [docs/architecture.md](./docs/architecture.md)；
 安装、配置与排错见 [docs/install.md](./docs/install.md)；本机联调环境（含免 Key 的 mock provider）见
 [docs/local-dev.md](./docs/local-dev.md)；发布流程见 [docs/releasing.md](./docs/releasing.md)。

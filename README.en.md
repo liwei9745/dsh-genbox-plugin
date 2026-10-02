@@ -10,7 +10,8 @@ edit them, generate video, and cut video locally - plus the media library and pr
 
 A parameter reference for every tool lives in [docs/tools.md](./docs/tools.md) (**generated from the code**, so it
 cannot drift). Measured integration pitfalls, with root causes and source locations, are in
-[docs/genbox-pitfalls.en.md](./docs/genbox-pitfalls.en.md). Design notes live in [PLAN.md](./PLAN.md); the internal layout and how to add a tool in
+[docs/genbox-pitfalls.en.md](./docs/genbox-pitfalls.en.md), and the browser reachability coverage matrix in
+[docs/browser-checks.en.md](./docs/browser-checks.en.md). Design notes live in [PLAN.md](./PLAN.md); the internal layout and how to add a tool in
 [docs/architecture.md](./docs/architecture.md); install, configuration and troubleshooting in [docs/install.md](./docs/install.md)
 (English: [docs/install.en.md](./docs/install.en.md)); the local development environment (including a zero-API-key mock
 provider) in [docs/local-dev.md](./docs/local-dev.md) (Chinese); the release process in [docs/releasing.md](./docs/releasing.md).
