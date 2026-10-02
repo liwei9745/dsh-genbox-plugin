@@ -80,6 +80,11 @@ OpenAI 的 `/images/variations` 是 DALL·E-2 时代的东西，`gpt-image` 系�
 - 生成页的**纵向分隔条**（实时预览 / 任务监视器之间）`startResize(e,'bottom')` 去 flex
   `.generate-preview`——那是 flex 容器的**孙节点**，真正该动的是 `#creatorCanvasRow`。
   实测修复前拖拽前后**所有几何量 delta 全为 0**。
+  同一条 12px 的分隔条原本还挂在会滚动的 `.generate-preview` 上（`bottom: -6px`）：它的中心与
+  `top: 5px` 的抓手标记都被 `overflow: auto` 裁掉，真实指针只有顶沿约 4px 能点到——
+  `elementFromPoint(中心)` 返回的是 `div#previewPanel`。改成 `bottom: 0` 后整条都在面板内。
+  **教训**：用合成 `dispatchEvent` 验证会绕过命中测试，把「点不到」伪装成「能用」；
+  这两条最终是用**真实鼠标序列**（`page.mouse`）在 1920×1080 与 1280×800 下验收的。
 
 ---
 

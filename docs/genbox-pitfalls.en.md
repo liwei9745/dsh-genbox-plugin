@@ -34,7 +34,9 @@ No API key needed: the repository ships a zero-cost mock provider, and
 
 Items 7 and 8 are measured in a real browser. `scripts/browser/measure-splitters.cjs`
 finds a chromium by itself (Playwright has to be resolvable - point `NODE_PATH` at an
-existing install if needed) and checks the splitter at two viewport sizes:
+existing install if needed) and checks the splitter at three viewport sizes with a real pointer
+sequence (synthetic events bypass the hit test - which had hidden that the bar's centre was
+clipped out of its scrolling panel, leaving only a few pixels of its top edge clickable):
 
 ```
 1920x1080: baseline 643+250=893 | +120 -> 683+210=893 | -240 -> 443+450=893
