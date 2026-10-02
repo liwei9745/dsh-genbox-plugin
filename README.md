@@ -12,7 +12,18 @@
 
 全部工具的参数速查见 [docs/tools.md](./docs/tools.md)（**由代码自动生成**，不会和实现漂移）；
 与 GenBox 集成的**实测踩坑清单**（含根因与源码位置）见 [docs/genbox-pitfalls.md](./docs/genbox-pitfalls.md)；
-前端**可达性检查覆盖矩阵**（为什么必须"先命中测试再发真实指针"）见 [docs/browser-checks.md](./docs/browser-checks.md)；
+前端**可达性检查覆盖矩阵**（为什么必须"先命中测试再发真实指针"）见 [docs/browser-checks.md](./docs/browser-checks.md)。
+### 验证与证据（三条入口）
+
+| 想看什么 | 去哪 | 一键复跑 |
+|---|---|---|
+| 现在到底通不通 | [docs/verification.md](./docs/verification.md)（内嵌一次真实运行的**原始输出**，22 个套件） | `node scripts/verify-all.mjs` |
+| 前端交互是否真的能点/能拖 | [docs/browser-checks.md](./docs/browser-checks.md)（可达性覆盖矩阵，6 项断言） | `node scripts/browser/measure-splitters.cjs` |
+| 接 GenBox 会踩哪些坑 | [docs/genbox-pitfalls.md](./docs/genbox-pitfalls.md)（10 条，含根因源码位置） | — |
+| 我们改过 GenBox 本体什么 | [ROADMAP.md](./ROADMAP.md) 的「上游修复台账」 | — |
+
+> 全部套件默认跑**零成本 mock provider**；真实 provider 联调是显式的 `GENBOX_REAL_PROVIDER=...`，绝不隐式花钱。
+> 缺前置（GenBox / ffmpeg / Playwright / 已装 profile）时套件会 **SKIP 并写明怎么补**，不会假装通过。
 调研结论与设计见 [PLAN.md](./PLAN.md)；**内部结构与如何加工具**见 [docs/architecture.md](./docs/architecture.md)；
 安装、配置与排错见 [docs/install.md](./docs/install.md)；本机联调环境（含免 Key 的 mock provider）见
 [docs/local-dev.md](./docs/local-dev.md)；发布流程见 [docs/releasing.md](./docs/releasing.md)。

@@ -11,7 +11,22 @@ edit them, generate video, and cut video locally - plus the media library and pr
 A parameter reference for every tool lives in [docs/tools.md](./docs/tools.md) (**generated from the code**, so it
 cannot drift). Measured integration pitfalls, with root causes and source locations, are in
 [docs/genbox-pitfalls.en.md](./docs/genbox-pitfalls.en.md), and the browser reachability coverage matrix in
-[docs/browser-checks.en.md](./docs/browser-checks.en.md). Design notes live in [PLAN.md](./PLAN.md); the internal layout and how to add a tool in
+[docs/browser-checks.en.md](./docs/browser-checks.en.md).
+### Verification and evidence (three entry points)
+
+| What you want | Where | One command |
+|---|---|---|
+| Is it working right now? | [docs/verification.md](./docs/verification.md) - a real run's **raw output**, 22 suites | `node scripts/verify-all.mjs` |
+| Can the UI really be clicked and dragged? | [docs/browser-checks.md](./docs/browser-checks.md) - reachability matrix, 6 assertions | `node scripts/browser/measure-splitters.cjs` |
+| What will bite me when integrating GenBox? | [docs/genbox-pitfalls.md](./docs/genbox-pitfalls.md) - 10 findings with source locations | - |
+| What did we change in GenBox itself? | the upstream fix ledger in [ROADMAP.md](./ROADMAP.md) | - |
+
+> Every suite runs against the **zero-cost mock provider** by default; real-provider work is the
+> explicit `GENBOX_REAL_PROVIDER=...` opt-in and never spends a key implicitly.
+> When a prerequisite is missing (GenBox, ffmpeg, Playwright, an installed profile) the suite
+> **skips and says how to provide it** instead of pretending to pass.
+
+Design notes live in [PLAN.md](./PLAN.md); the internal layout and how to add a tool in
 [docs/architecture.md](./docs/architecture.md); install, configuration and troubleshooting in [docs/install.md](./docs/install.md)
 (English: [docs/install.en.md](./docs/install.en.md)); the local development environment (including a zero-API-key mock
 provider) in [docs/local-dev.md](./docs/local-dev.md) (Chinese); the release process in [docs/releasing.md](./docs/releasing.md).
