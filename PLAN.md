@@ -1,4 +1,4 @@
-﻿# GenBox 脳 DeepSeek Harness 鎺ュ叆鏂规
+# GenBox 脳 DeepSeek Harness 鎺ュ叆鏂规
 
 > 璋冪爺鏃堕棿锛氭湰杞細璇濄€傜粨璁哄熀浜?`liwei9745/GenBox`锛坢aster锛寁2.6.x锛夋簮鐮佷笌瀹樻柟 DSH 鎻掍欢鏂囨。銆?> 璋冪爺瀵硅薄宸?clone 鍒?`upstream/GenBox`锛堝彧璇诲弬鑰冿紝鏈慨鏀癸級銆?
 ## 0. 缁撹锛圱L;DR锛?
@@ -177,3 +177,19 @@ E:\AI\GenBox-dsh\
 | `mode=precision_edit` | 鈿狅笍 琚?GenBox 鐨?`precision_edit_provider_unsupported` 鎷︽埅锛氬畠瑕佹眰"鏄惧紡楠岃瘉杩囩殑鏀瑰浘妯″瀷 + 鍖归厤浼犺緭"锛屾湰鍦?mock 鏃犳硶浼€犮€?*杩欎笉鏄彃浠剁己闄?*锛岃€屾槸 GenBox 鍒绘剰鐨勬巿鏉冮棬妲涳紱鐢ㄧ湡瀹?GPT-image/Gemini 绔偣鏃舵墠鍙兘閫氳繃 |
 
 **缁撹**锛氬伐鍏烽潰锛?0 涓級宸茶鐩栫洰鏍囬噷鐨勭敓鍥俱€佹敼鍥俱€佺敓瑙嗛銆佸獟浣撳簱锛沗鏀硅棰慲 浠?`i2vid`/`keyframes` 鍐嶇敓鎴愬疄鐜般€傚墿涓嬬殑鏄垎鍙戯紙M6锛変笌鐪熷疄 provider 鑱旇皟銆?
+### 第 4 轮补记（M6 打包分发）
+
+| 项 | 结论 | 证据 |
+|---|---|---|
+| tarball 内容 | ✅ `pnpm pack` 产物含 `lib/index.js`、`lib/index.d.ts`、`package.json`、`cordis.patch.yml`、`README.md` | `tar -tzf` |
+| tarball 安装 | ✅ 先 `remove` 掉 link 安装，再 `dsh plugin --profile genbox-dev add ./dsh-genbox-plugin-0.1.0.tgz`，包名自动进入 `dsh.profile.bundles` | profile `package.json` |
+| 宿主加载 | ✅ 启动时打印 `[genbox] plugin loaded (baseUrl=http://127.0.0.1:8892)` —— 这是宿主真的 import 并执行了 `apply` 的直接证据 | `dsh --profile genbox-dev --port 3096 --no-open` |
+| peer 解析 | ✅ profile 的 `node_modules` 里**没有** `@deepseek-ai/dsh-tools` / `schemastery` / `cordis`（pnpm 只报 peer 警告），插件依然加载成功 —— 说明宿主运行时替插件解析了这些包，与官方发布文档描述一致 | 同上 |
+| 仓库 | ✅ `git init` + 首次提交（28 个文件，作者沿用全局身份 liwei9745）；`lib/`、`upstream/`、`.genbox-out/`、`*.tgz` 已忽略 | `git log` |
+| git 安装路径 | ✅ 增加 `prepare` 脚本并实测可构建出 `lib/`，这是 `dsh plugin add github:...` 能工作的前提 | `pnpm run prepare` |
+
+**新增文档**：[docs/install.md](docs/install.md)（安装三种方式 / 验证命令 / 配置 / 7 条排错），README 重写为可直接对外发布的形态（状态表、安装、工具表、配置、发布清单）。
+
+**仍待用户参与的两件事**：
+1. 真实 provider 联调（需要 GenBox 侧配置 API Key；插件侧无需改动）。
+2. 装进 `desktop` profile 并用 DSH GUI 实机验证（需重启 DSH NEXT）。
