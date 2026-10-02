@@ -17,7 +17,7 @@ if (provider === undefined || provider.trim() === '') {
   process.exit(0)
 }
 const size = process.env.GENBOX_REAL_SIZE ?? '1024x1024'
-const wanted = new Set((process.env.GENBOX_REAL_STEPS ?? 'generate,edit,inpaint').split(',').map((step) => step.trim()))
+const wanted = new Set((process.env.GENBOX_REAL_STEPS ?? 'generate,edit,inpaint,variations').split(',').map((step) => step.trim()))
 const outDir = resolve(process.env.VERIFY_OUT_DIR ?? '.genbox-out', 'real-provider')
 const ffmpeg = process.env.FFMPEG_PATH ?? 'ffmpeg'
 
@@ -124,6 +124,33 @@ if (wanted.has('inpaint')) {
       check('real inpaint with a mask produced a third file', inpainted.status === 'completed' && present(third))
       check('the inpaint did not overwrite the earlier files', third !== first && third !== second)
       if (present(third)) step('inpainted ' + third + ' (' + statSync(third).size + 'B, ' + magic(third) + ')')
+    }
+  }
+}
+
+if (wanted.has('variations')) {
+  if (!present(first)) {
+    step('variations skipped: no source image from the generate step')
+  } else {
+    const started = Date.now()
+    let variations
+    try {
+      variations = await tool('genbox_image_variations').execute(
+        { image: first, provider, strategy: 'auto', n: 1 },
+        exec,
+      )
+    } catch (error) {
+      step('variations failed: ' + (error instanceof Error ? error.message : String(error)).slice(0, 180))
+    }
+    if (variations !== undefined) {
+      const files = variations.files ?? []
+      check('real variations produced a file', files.some(present))
+      // 'auto' tries GenBox's legacy /images/variations proxy first and falls back to
+      // repainting through mode=i2i, so either strategy is a legitimate outcome.
+      check('the variation result names the strategy it used',
+        variations.strategy === 'native' || variations.strategy === 'prompt')
+      step('variations via ' + variations.strategy + ' -> ' + String(files[0] ?? '(none)')
+        + ' (' + statSync(files[0]).size + 'B, ' + ((Date.now() - started) / 1000).toFixed(1) + 's)')
     }
   }
 }
