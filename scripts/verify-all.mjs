@@ -75,7 +75,7 @@ console.log(
   + ' ffmpeg=' + (hasFfmpeg ? 'ok' : 'missing')
   + ' market=' + (hasMarket ? 'ok' : 'missing')
   + ' installed=' + (hasInstalled ? 'ok' : 'set DSH_PROFILE_DIR')
-  + ' real-provider=' + (hasRealProvider ? 'ok' : 'set GENBOX_REAL_PROVIDER'),
+  + ' real-provider=' + (hasRealProvider ? 'ok' : 'off (set GENBOX_REAL_PROVIDER)'),
 )
 
 const results = []

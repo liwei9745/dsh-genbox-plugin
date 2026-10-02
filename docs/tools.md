@@ -70,7 +70,7 @@ Takes no parameters.
 ## genbox_image_edit
 
 ```
-Edit an existing image through a local GenBox server. mode=i2i re-renders the whole image from the reference plus a prompt; mode=inpaint repaints only the white area of a mask; mode=precision_edit keeps the original canvas and applies an instruction (resize mode requires precisionTargetSize).
+Edit an existing image through a local GenBox server. mode=i2i re-renders the whole image from the reference plus a prompt; mode=inpaint repaints only the white area of a mask; mode=precision_edit keeps the original canvas and applies an instruction (resize mode requires precisionTargetSize). inpaint needs a provider whose inpaint_mask capability is enabled, precision_edit one whose precision_edit is; genbox_providers lists both, and this tool names the usable providers when GenBox refuses the mode.
 ```
 
 | Parameter | Type | Required | Meaning |

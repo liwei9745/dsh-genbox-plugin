@@ -9,6 +9,33 @@ import { galleryFilename, listProviders, resolveOutputDir, toImageData } from '.
 
 const TERMINAL_STATUSES = new Set(['completed', 'failed', 'cancelled'])
 
+/**
+ * GenBox refuses an edit when the chosen provider never declared the capability the
+ * mode needs ("precision_edit_provider_unsupported", "inpaint_provider_unsupported").
+ * Naming the enabled providers that WOULD work saves the caller a guessing round.
+ */
+async function explainProviderUnsupported(
+  error: unknown,
+  client: GenBoxClient,
+  mode: string,
+  signal?: AbortSignal | undefined,
+): Promise<unknown> {
+  const message = error instanceof Error ? error.message : String(error)
+  if (!/provider_unsupported/i.test(message)) return error
+  const capability = mode === 'inpaint' ? 'inpaint_mask' : 'precision_edit'
+  try {
+    const providers = await listProviders(client, signal)
+    const capable = providers
+      .filter((provider) => provider.enabled === true && provider.capabilities?.[capability] === true)
+      .map((provider) => provider.id)
+    return new Error(message + (capable.length > 0
+      ? ' Enabled providers that declare ' + capability + ': ' + capable.join(', ') + '.'
+      : ' No enabled provider declares ' + capability + '; enable one in GenBox, or use another mode (see genbox_providers).'))
+  } catch {
+    return error
+  }
+}
+
 interface GenerationResult {
   success?: boolean
   local_path?: string | null
@@ -248,7 +275,9 @@ export function registerImageTools(ctx: Context, client: GenBoxClient, config: C
     description:
       'Edit an existing image through a local GenBox server. mode=i2i re-renders the whole image from the reference '
       + 'plus a prompt; mode=inpaint repaints only the white area of a mask; mode=precision_edit keeps the original '
-      + 'canvas and applies an instruction (resize mode requires precisionTargetSize).',
+      + 'canvas and applies an instruction (resize mode requires precisionTargetSize). inpaint needs a provider whose '
+      + 'inpaint_mask capability is enabled, precision_edit one whose precision_edit is; genbox_providers lists both, '
+      + 'and this tool names the usable providers when GenBox refuses the mode.',
     parameters: {
       prompt: { type: 'string', required: true, description: 'What to change.' },
       image: { type: 'string', required: true, description: 'Source image: a local png/jpeg/webp path or a data URL.' },
@@ -378,14 +407,18 @@ export function registerImageTools(ctx: Context, client: GenBoxClient, config: C
         }
       }
 
-      return await runGeneration(
-        client,
-        config,
-        body,
-        resolveOutputDir(config.outputDir, args.outputDir),
-        exec.signal,
-        args.background === true,
-      )
+      try {
+        return await runGeneration(
+          client,
+          config,
+          body,
+          resolveOutputDir(config.outputDir, args.outputDir),
+          exec.signal,
+          args.background === true,
+        )
+      } catch (error) {
+        throw await explainProviderUnsupported(error, client, mode, exec.signal)
+      }
     },
   }))
 }

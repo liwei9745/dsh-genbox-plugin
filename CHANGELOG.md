@@ -9,6 +9,11 @@
   所以「下载到的视频」从未被真正解码验证过——之前的断言只查了「文件非空」。现在 mock 在启动时用 ffmpeg 生成
   真实的 2 秒片段（ffmpeg 不可用时回退到占位数据并写明原因）。这条是旅程测试抓出来的。
 - 修正 `genbox_video_edit` 的工具描述：原来只列了 11 种操作里的 6 种（对照自动生成的 `docs/tools.md` 发现）。
+- **能力拒绝给出可用清单**：GenBox 拒绝 `precision_edit`/`inpaint`（provider 没声明对应能力）时，
+  工具会把失败原因**和当前已启用、确实支持该能力的 provider id 一起说出来**，而不是只丢一个 422；
+  `genbox_image_edit` 的描述也补上了这个前提。
+- `verify-edit-modes.mjs` 从「只打印不判定」升级为 6 项断言的真实套件（自造素材与白色蒙版、
+  inpaint 真跑、缺 model 的拒绝、能力不足时的拒绝并点名可用 provider）。
 - 新增 `scripts/verify-real-provider.mjs`：**唯一一条花真钱**的验证（默认 SKIP，需要显式给 `GENBOX_REAL_PROVIDER`），
   做一次真文生图 + 一次真图生图并校验产物是真实图片容器。已用本机配置的 `gpt-image/gpt-image-2-vip` 实跑通过。
 - 用户旅程套件升级到 17 项断言：新增**取消路径**（提交后台任务 → 取消 → 6 秒后仍是 cancelled 且不产文件），
