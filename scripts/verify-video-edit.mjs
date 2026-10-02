@@ -1,12 +1,13 @@
 // Verify the ffmpeg-backed local video editor against generated test clips.
 import { execFile } from 'node:child_process'
 import { existsSync, mkdirSync, statSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import { promisify } from 'node:util'
 import { apply } from '../lib/index.js'
 
 const run = promisify(execFile)
-const outDir = 'E:/AI/GenBox-dsh/.genbox-out/video-edit'
+// Portable output location so this script also runs in CI.
+const outDir = resolve(process.env.VERIFY_OUT_DIR ?? '.genbox-out', 'video-edit')
 mkdirSync(outDir, { recursive: true })
 
 // This machine's ffmpeg build has no libx264; pick whatever H.264 encoder it ships.

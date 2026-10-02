@@ -2,12 +2,13 @@
 // normalised genbox-annotation-v3 payload.
 import { execFile } from 'node:child_process'
 import { mkdirSync, statSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import { promisify } from 'node:util'
 import { readImageSize, renderAnnotationOverlay, toGenBoxAnnotations } from '../lib/index.js'
 
 const run = promisify(execFile)
-const outDir = 'E:/AI/GenBox-dsh/.genbox-out/annotate'
+// Portable output location so this script also runs in CI.
+const outDir = resolve(process.env.VERIFY_OUT_DIR ?? '.genbox-out', 'annotate')
 mkdirSync(outDir, { recursive: true })
 
 const width = 320

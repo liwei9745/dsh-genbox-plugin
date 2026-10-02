@@ -4,6 +4,8 @@
 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的插件 bundle，让 DSH 里的 agent
 能直接生图、改图、生视频、改视频（再生成式）并取回媒体库素材。
 
+**English: [README.en.md](./README.en.md)**
+
 调研结论与设计见 [PLAN.md](./PLAN.md)；安装、配置与排错见 [docs/install.md](./docs/install.md)；
 本机联调环境（含免 Key 的 mock provider）见 [docs/local-dev.md](./docs/local-dev.md)。
 
