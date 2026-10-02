@@ -17,7 +17,7 @@
 | G2 可协作 | issue 模板、贡献指南、CI 绿、用户自检工具 | CI 在 PR 上跑通 typecheck+build；`genbox_doctor` 在健康/故障两种环境下给出正确结论；issue 模板要求贴 `verify-all` 与 doctor 输出 | 🟡 只等仓库建立 |
 | G3 真跑 | 真实 provider 端到端 | 用真实 Key 生成一张图、一段视频并落盘 | ⏳ 需要你在 GenBox 配 Key |
 | G4a 非阻塞 | 生图/生视频支持 `background: true` 立即返回 + `genbox_task` 查询/下载/取消 | `scripts/verify-background.mjs`：生图 85ms 返回、随后 settled + 文件落盘；视频同样通过 | ✅ 已完成 |
-| G4b 体验 | UI 卡片（`presentCall`/`presentResult`）、改用 DSH 原生 `ctx.jobs` 后台任务 | 卡片在 Web 端渲染；任务返回原生 jobId | ⬜ 未开始 |
+| G4b 体验 | UI 卡片（`presentCall`/`presentResult`/`presentationMeta`）、DSH 原生 `ctx.jobs` 后台任务 | `scripts/verify-presentation.mjs` 12 项断言全过（结果卡片从持久化 meta 重建）；`nativeJobs` 桩验证通过 | ✅ 已完成（渲染需客户端支持） |
 | G5a 视频编辑 | `genbox_video_edit`：trim / concat / speed / mute / resize / extract_frame（本地 ffmpeg，补 GenBox 的改视频缺口） | `scripts/verify-video-edit.mjs`：六个操作全部 FILE-OK（trim 1.53s、concat 5.04s、speed 1.67s、resize 160x120、帧 PNG） | ✅ 已完成 |
 | G5b 视频编辑 II | crop / volume / replace_audio / burn_subtitles / to_gif 已补齐（本机 ffmpeg 带 libass） | `scripts/verify-video-edit.mjs`：11/11 FILE-OK | ✅ 已完成 |
 | G5c 批注改图 | 纯 JS 生成批注叠加图（箭头/方框/椭圆/画笔 + 编号），拼 GenBox 的 `genbox-annotation-v3` 三件套 | `scripts/verify-annotate.mjs`（ffprobe 独立验证 320x240 RGBA）、`scripts/verify-precision.mjs`（信封通过 GenBox 输入校验，停在 provider 授权门槛） | ✅ 已完成 |

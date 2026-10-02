@@ -86,6 +86,15 @@ dsh plugin --profile <profile> add github:<you>/GenBox-dsh
 Generated media lands in `outputDir` and the absolute paths are returned to the model, which can then open them with
 the built-in `read_image` tool.
 
+## Rendering (UI cards)
+
+The media tools implement `presentCall`, `presentResult` and `output.presentationMeta`:
+the finished card is rebuilt from the **persisted meta** (safe on replay) and lists the produced files in `locations`.
+
+> To be honest: **the built-in DSH Web Client does not consume these render intents yet**, so nothing looks different there
+> (it falls back to a generic card). Clients that implement the contract will render them. The shapes are pinned by the
+> 12 assertions in `scripts/verify-presentation.mjs`.
+
 ## Configuration
 
 | Field | Default | Meaning |

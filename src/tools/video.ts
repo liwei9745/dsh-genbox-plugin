@@ -100,6 +100,25 @@ export function registerVideoTools(ctx: Context, client: GenBoxClient, config: C
         if (result.error !== undefined) lines.push('- error: ' + result.error)
         return [{ type: 'text' as const, text: lines.join('\n') }]
       },
+      presentationMeta: (_args, value) => {
+        const result = value as unknown as VideoOutcome
+        return { status: result.status, taskId: result.taskId, background: result.background, file: result.file ?? null }
+      },
+    },
+    presentCall: (args) => ({
+      card: 'generic',
+      title: 'Generate video (' + String(args.mode ?? 'ti2vid') + '): ' + String(args.prompt).slice(0, 70),
+      kind: 'execute',
+      rawInput: JSON.stringify({ prompt: args.prompt, provider: args.provider, background: args.background === true }, null, 2),
+    }),
+    presentResult: (_args, result) => {
+      const meta = result.meta as { file?: unknown; status?: unknown; taskId?: unknown } | undefined
+      const file = typeof meta?.file === 'string' ? meta.file : ''
+      return {
+        card: 'generic',
+        title: file !== '' ? 'Video written to ' + file : 'Video job ' + String(meta?.status ?? 'finished') + ' (' + String(meta?.taskId ?? '?') + ')',
+        ...(file !== '' ? { locations: [{ path: file }] } : {}),
+      }
     },
     async execute(args, exec) {
       const mode = args.mode ?? 'ti2vid'

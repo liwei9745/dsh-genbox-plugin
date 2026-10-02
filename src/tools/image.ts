@@ -127,6 +127,23 @@ async function runGeneration(
   }
 }
 
+/** Persisted facts a replay can rebuild the result card from. */
+function batchMeta(value: unknown) {
+  const batch = value as ImageBatch
+  return {
+    status: batch.status,
+    generationId: batch.generationId,
+    files: batch.images.map((image) => image.file),
+  }
+}
+
+function batchLocations(meta: unknown) {
+  const files = (meta as { files?: unknown }).files
+  return Array.isArray(files)
+    ? files.filter((file): file is string => typeof file === 'string').map((path) => ({ path }))
+    : []
+}
+
 function renderBatch(headline: string, value: ImageBatch) {
   if (value.background) {
     return [{
@@ -174,7 +191,27 @@ export function registerImageTools(ctx: Context, client: GenBoxClient, config: C
         description: 'Return as soon as GenBox accepts the job instead of waiting for the images. Poll with genbox_task.',
       },
     },
-    output: { schema: BATCH_SCHEMA, render: (_args, value) => renderBatch('genbox_image_generate', value as ImageBatch) },
+    output: {
+      schema: BATCH_SCHEMA,
+      render: (_args, value) => renderBatch('genbox_image_generate', value as ImageBatch),
+      presentationMeta: (_args, value) => batchMeta(value),
+    },
+    presentCall: (args) => ({
+      card: 'generic',
+      title: 'Generate images: ' + String(args.prompt).slice(0, 80),
+      kind: 'execute',
+      rawInput: JSON.stringify({ prompt: args.prompt, providers: args.providers, size: args.size, count: args.count }, null, 2),
+    }),
+    presentResult: (_args, result) => {
+      const locations = batchLocations(result.meta)
+      return {
+        card: 'generic',
+        title: locations.length > 0
+          ? 'Generated ' + locations.length + ' image(s)'
+          : 'GenBox generation ' + String((result.meta as { status?: unknown } | undefined)?.status ?? 'finished'),
+        ...(locations.length > 0 ? { locations } : {}),
+      }
+    },
     async execute(args, exec) {
       const targets = await resolveTargets(client, config, args.providers, args.model, exec.signal)
       if (targets.length === 0) {
@@ -255,7 +292,27 @@ export function registerImageTools(ctx: Context, client: GenBoxClient, config: C
         description: 'Return as soon as GenBox accepts the job instead of waiting for the result. Poll with genbox_task.',
       },
     },
-    output: { schema: BATCH_SCHEMA, render: (_args, value) => renderBatch('genbox_image_edit', value as ImageBatch) },
+    output: {
+      schema: BATCH_SCHEMA,
+      render: (_args, value) => renderBatch('genbox_image_edit', value as ImageBatch),
+      presentationMeta: (_args, value) => batchMeta(value),
+    },
+    presentCall: (args) => ({
+      card: 'generic',
+      title: 'Edit image (' + String(args.mode ?? 'i2i') + '): ' + String(args.prompt).slice(0, 70),
+      kind: 'execute',
+      rawInput: JSON.stringify({ image: args.image, mode: args.mode, annotations: args.annotations?.length ?? 0 }, null, 2),
+    }),
+    presentResult: (_args, result) => {
+      const locations = batchLocations(result.meta)
+      return {
+        card: 'generic',
+        title: locations.length > 0
+          ? 'Edited image written to ' + locations.length + ' file(s)'
+          : 'GenBox edit ' + String((result.meta as { status?: unknown } | undefined)?.status ?? 'finished'),
+        ...(locations.length > 0 ? { locations } : {}),
+      }
+    },
     async execute(args, exec) {
       const mode = args.mode ?? 'i2i'
       const targets = await resolveTargets(client, config, args.providers, args.model, exec.signal)

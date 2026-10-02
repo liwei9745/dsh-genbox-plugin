@@ -102,6 +102,14 @@ dsh plugin --profile <profile> add github:<you>/GenBox-dsh
 生成的图片/视频会落到 `outputDir`（默认 `.genbox`）下并把绝对路径返回给模型；模型可以直接用
 DSH 内置的 `read_image` 看图。
 
+## 呈现（UI 卡片）
+
+媒体类工具都实现了 `presentCall` / `presentResult` 与 `output.presentationMeta`：
+结果卡片从**持久化的 meta** 重建（回放安全），并把产出文件放进 `locations` 供编辑器跟随。
+
+> 实话实说：**DSH 内置 Web Client 目前不消费这些渲染意图**，所以在当前界面里看不到差别（回退为通用卡片）；
+> 支持该契约的客户端才会把它渲染成卡片。形状由 `scripts/verify-presentation.mjs` 的 12 项断言守住。
+
 ## 配置
 
 | 字段 | 默认 | 说明 |

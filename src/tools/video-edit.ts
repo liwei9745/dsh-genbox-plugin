@@ -135,6 +135,25 @@ export function registerVideoEditTool(ctx: Context, config: Config) {
             + ' (' + result.width + 'x' + result.height + ', ' + result.durationSeconds + 's, ' + result.sizeBytes + 'B)',
         }]
       },
+      presentationMeta: (_args, value) => {
+        const result = value as unknown as VideoEditResult
+        return { operation: result.operation, file: result.file, width: result.width, height: result.height }
+      },
+    },
+    presentCall: (args) => ({
+      card: 'generic',
+      title: 'ffmpeg edit (' + String(args.operation) + '): ' + String(args.input).slice(-60),
+      kind: 'execute',
+      rawInput: JSON.stringify({ operation: args.operation, input: args.input, outputDir: args.outputDir }, null, 2),
+    }),
+    presentResult: (_args, result) => {
+      const meta = result.meta as { file?: unknown; operation?: unknown } | undefined
+      const file = typeof meta?.file === 'string' ? meta.file : ''
+      return {
+        card: 'generic',
+        title: file !== '' ? 'Local edit (' + String(meta?.operation ?? '?') + ') -> ' + file : 'ffmpeg edit finished',
+        ...(file !== '' ? { locations: [{ path: file }] } : {}),
+      }
     },
     async execute(args, exec) {
       const signal = exec.signal
