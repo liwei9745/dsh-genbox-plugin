@@ -39,6 +39,14 @@ node scripts\verify-all.mjs
 ## Not covered yet
 
 - The provider column handle `.provider-col-resize`: audited (a real drag moves the card 454 -> 534)
+
+- **The prompt panel scrolls internally - measured, deliberately left alone.** Its content is
+  ~351px inside a fixed 250px row at 1920x1080, 1600x900 and 1366x768. Letting the row size to
+  its content (`flex: 0 1 auto` + `max-height`) made it worse: the row collapsed to its 210px
+  minimum and the panel's usable height dropped from 248 to 208. Removing the scroll means either
+  a taller row (at the preview's expense) or a different panel layout - a trade-off, and with the
+  action button now pinned in view there is no reason to pay it. The measurements are recorded
+  here instead.
   but only ~4 of its 8px are hit-testable - the card's `overflow: hidden` clips the rest and a
   `z-index` bump did not help. Usable but narrow; not asserted yet.
 - Narrow-viewport expectations now have a positive assertion: when the bar is not laid out, the
