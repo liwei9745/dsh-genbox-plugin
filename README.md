@@ -10,9 +10,25 @@
 
 **English: [README.en.md](./README.en.md)**
 
+![GenBox 工作台：左侧选模型、中间实时预览、右侧创作工具](assets/screenshots/01-genbox-generate.png)
+
+> 插件驱动的是你**本机**的 [GenBox](https://github.com/liwei9745/GenBox) 工作台：provider、API Key、尺寸、风格都在那个界面里管理；
+> 插件只负责把这些能力**交给 agent**，并把生成的图片/视频落到本地目录后把路径交回给模型。
+
+## 真图示例（全部由本插件跑出来，未做后期）
+
+| 文生图 | 局部重绘（白框内替换，其余原样保留） | 变体（同底图重画） |
+|---|---|---|
+| ![文生图产物](assets/screenshots/03-result-t2i.jpg) | ![局部重绘产物](assets/screenshots/04-result-inpaint.jpg) | ![变体产物](assets/screenshots/05-result-variation.jpg) |
+
+精准改图：左侧画布手绘批注，右侧实时预览（批注会被转成打码叠加图交给 GenBox）：
+
+![精准改图工作台](assets/screenshots/02-genbox-precision.png)
+
 全部工具的参数速查见 [docs/tools.md](./docs/tools.md)（**由代码自动生成**，不会和实现漂移）；
 与 GenBox 集成的**实测踩坑清单**（含根因与源码位置）见 [docs/genbox-pitfalls.md](./docs/genbox-pitfalls.md)；
 前端**可达性检查覆盖矩阵**（为什么必须"先命中测试再发真实指针"）见 [docs/browser-checks.md](./docs/browser-checks.md)。
+
 ### 验证与证据（三条入口）
 
 | 想看什么 | 去哪 | 一键复跑 |

@@ -8,10 +8,27 @@ Bring a local [GenBox](https://github.com/liwei9745/GenBox) media server (FastAP
 generation) into [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) as agent tools: generate images,
 edit them, generate video, and cut video locally - plus the media library and prompt assistant.
 
+![The GenBox workbench: models on the left, live preview in the middle, creation tools on the right](assets/screenshots/01-genbox-generate.png)
+
+> The plugin drives the [GenBox](https://github.com/liwei9745/GenBox) workbench **on your own machine**: providers,
+> API keys, sizes and styles are managed in that UI. The plugin only hands those capabilities to the agent, and
+> returns the local path of every generated image or video so the model can look at it.
+
+## Real output (produced by this plugin, no post-processing)
+
+| Text to image | Inpainting (only the white box changes) | Variation (same base, repainted) |
+|---|---|---|
+| ![A generated image](assets/screenshots/03-result-t2i.jpg) | ![An inpainted image](assets/screenshots/04-result-inpaint.jpg) | ![A variation](assets/screenshots/05-result-variation.jpg) |
+
+Precision editing: annotate on the canvas, watch the live preview (the annotations become a marked overlay for GenBox):
+
+![The precision editing workbench](assets/screenshots/02-genbox-precision.png)
+
 A parameter reference for every tool lives in [docs/tools.md](./docs/tools.md) (**generated from the code**, so it
 cannot drift). Measured integration pitfalls, with root causes and source locations, are in
 [docs/genbox-pitfalls.en.md](./docs/genbox-pitfalls.en.md), and the browser reachability coverage matrix in
 [docs/browser-checks.en.md](./docs/browser-checks.en.md).
+
 ### Verification and evidence (three entry points)
 
 | What you want | Where | One command |
