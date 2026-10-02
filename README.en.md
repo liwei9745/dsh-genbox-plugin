@@ -1,5 +1,7 @@
 # dsh-genbox-plugin
 
+[![npm](https://img.shields.io/npm/v/dsh-genbox-plugin)](https://www.npmjs.com/package/dsh-genbox-plugin)
+
 Bring a local [GenBox](https://github.com/liwei9745/GenBox) media server (FastAPI, multi-provider image and video
 generation) into [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) as agent tools: generate images,
 edit them, generate video, and cut video locally - plus the media library and prompt assistant.
@@ -54,11 +56,13 @@ On startup you should see:
 dsh --profile <profile> --patch E:/AI/GenBox-dsh/dev/overlay.cordis.yml
 ```
 
-### 3. From npm or GitHub (once published)
+### 3. From npm (published)
 
 ```powershell
+# 0.1.0 is on npm; this installs prebuilt code with no build authorisation
 dsh plugin --profile <profile> add dsh-genbox-plugin
-dsh plugin --profile <profile> add github:<you>/GenBox-dsh
+
+dsh --profile <profile> --dump-config | Select-String genbox   # confirm the plugin layer
 ```
 
 > The `desktop` profile is owned by the DSH Desktop application; installing into it goes through that app, and it

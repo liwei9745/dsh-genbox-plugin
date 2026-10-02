@@ -1,5 +1,7 @@
 # dsh-genbox-plugin
 
+[![npm](https://img.shields.io/npm/v/dsh-genbox-plugin)](https://www.npmjs.com/package/dsh-genbox-plugin)
+
 把 [GenBox](https://github.com/liwei9745/GenBox)（本地 FastAPI 媒体生成工作台）接入
 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的插件 bundle，让 DSH 里的 agent
 能直接生图、改图、生视频、改视频（再生成式）并取回媒体库素材。
@@ -71,11 +73,13 @@ dsh plugin --profile <profile> add ./dsh-genbox-plugin-0.1.0.tgz
 dsh --profile <profile> --patch E:/AI/GenBox-dsh/dev/overlay.cordis.yml
 ```
 
-### 3. 从 npm / GitHub（发布后）
+### 3. 从 npm 安装（**已发布**）
 
 ```powershell
+# 0.1.0 已在 npm 上，装的是预构建产物，不需要任何构建授权
 dsh plugin --profile <profile> add dsh-genbox-plugin
-dsh plugin --profile <profile> add github:<you>/GenBox-dsh
+
+dsh --profile <profile> --dump-config | Select-String genbox   # 确认插件层已生效
 ```
 
 > 装进 `desktop` profile 后需要重启 DSH NEXT 才生效。建议先用独立 profile

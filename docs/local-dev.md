@@ -145,3 +145,34 @@ git push -u origin main
 
 推送凭据不要在 URL 里带 token（失败时 git 会把整条 URL 打到终端上，等于泄露）。
 `scripts/publish.mjs` 现在改用 `http.extraheader` 传递凭据。
+## 10. GitHub CLI（便携安装，不改系统）
+
+winget 在这台机器上连不上源，所以 `gh` 用便携包安装：下载 GitHub 官方的
+`gh_<version>_windows_amd64.zip`，解压到 `E:\AI\tools\gh`，直接用
+`E:\AI\tools\gh\bin\gh.exe`。**不写系统 PATH、不做机器级安装。**
+
+登录（浏览器一次性授权）：
+
+```powershell
+E:\AI\tools\gh\bin\gh.exe auth login      # GitHub.com -> HTTPS -> Login with a web browser
+```
+
+**临时代理**（只对当前这个终端窗口有效，关掉即失效，不写任何配置文件）：
+
+```powershell
+$env:HTTP_PROXY = 'http://127.0.0.1:7897'
+$env:HTTPS_PROXY = 'http://127.0.0.1:7897'
+```
+
+用 gh 的凭据推送（同样是单次生效，不动全局 git 配置）：
+
+```powershell
+cd E:\AI\GenBox-dsh
+git -c credential.helper="!E:/AI/tools/gh/bin/gh.exe auth git-credential" push -u origin main
+```
+
+加仓库标签：
+
+```powershell
+E:\AI\tools\gh\bin\gh.exe repo edit liwei9745/dsh-genbox-plugin --add-topic dsh-plugin --add-topic deepseek-harness
+```
