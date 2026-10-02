@@ -185,7 +185,10 @@ async function releaseWithToken(token) {
   if (!topics.ok) throw new Error('topic update failed: ' + topics.status + ' ' + (await topics.text()).slice(0, 200))
   tryRun('git', ['remote', 'remove', 'origin'])
   run('git', ['remote', 'add', 'origin', 'https://github.com/' + owner + '/' + NAME + '.git'])
-  run('git', ['push', 'https://x-access-token:' + token + '@github.com/' + owner + '/' + NAME + '.git', 'HEAD:refs/heads/' + branchName])
+  // Send the credential as a header, never inside the URL: a failing push prints its
+  // remote URL, and a token in that URL would leak into the terminal and the logs.
+  const basic = Buffer.from('x-access-token:' + token, 'utf8').toString('base64')
+  run('git', ['-c', 'http.extraheader=Authorization: Basic ' + basic, 'push', 'https://github.com/' + owner + '/' + NAME + '.git', 'HEAD:refs/heads/' + branchName])
   return owner
 }
 

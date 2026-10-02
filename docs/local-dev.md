@@ -131,3 +131,17 @@ Remove-Item -Recurse -Force 'E:\AI\GenBox-dsh\lib-locked-<日期>'
 ```
 
 诊断原始记录保存在 `.lab/acl-report/acl-report-*.jsonl`（已 gitignore）。
+## 9. 推送到 GitHub 需要走代理
+
+本机访问 `github.com` 必须经过系统代理（Clash 在 `127.0.0.1:7897`），但 git 默认不读系统代理，
+于是 `git push` 会以 `Recv failure: Connection was reset` 失败。给本仓库配上代理即可：
+
+```powershell
+cd E:\AI\GenBox-dsh
+git config --local http.proxy http://127.0.0.1:7897
+git config --local https.proxy http://127.0.0.1:7897
+git push -u origin main
+```
+
+推送凭据不要在 URL 里带 token（失败时 git 会把整条 URL 打到终端上，等于泄露）。
+`scripts/publish.mjs` 现在改用 `http.extraheader` 传递凭据。
