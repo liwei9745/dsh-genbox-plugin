@@ -46,23 +46,28 @@ That last line is the automated counterpart of item 7: the precision workbench's
 changes the height only (h +120, w 0). It needs a local image - pass `PROBE_IMAGE=<png>` or let
 it pick the newest png under `.genbox-out`.
 
-## 9. The canvas corner grip can end up under the status bar (**not fixed, reproducible**)
+## 9. The canvas corner grip was swallowed by the status bar (**fixed**)
 
-With a tall canvas and a short viewport the shell is allowed to overflow
-(`overflow: visible` while `precision-edit-active`), and the canvas size limit is computed from the
-viewport without subtracting the bottom status bar (`.status-bar`, min-height 28px, with a
-`backdrop-filter`). The shell's bottom-right corner - where the 44x44 `nwse` grip sits - therefore lands
-underneath the status bar:
+**Symptom:** with a tall canvas and a short viewport the 44x44 `nwse` grip at the canvas's
+bottom-right corner ended up underneath the app status bar - `document.elementFromPoint()`
+returned `div.status-bar` and no pointer event could reach the grip.
 
-```js
-document.elementFromPoint(gripX, gripY)   // -> div.status-bar (not the grip)
+**Cause:** the canvas height limit was a viewport allowance (`viewportHeight - 120` in
+`precisionCanvasResizeLimits`); it neither reserved the status bar nor looked at the shell's own
+top edge, and the workbench panel is allowed to overflow in precision-edit mode.
+
+**`z-index` cannot fix it** (measured): an ancestor of the grip, `#panelPrecisionEdit`,
+carries a `backdrop-filter` and is a stacking context of its own, painting in DOM order before
+the status bar; raising the grip to `z-index: 30` changed nothing.
+
+**Fix:** a new `precisionCanvasAvailableHeight(shell)` measures from the shell's top to the status
+bar's top and feeds `maxHeight` (still clamped to 240-760). Measured at 1920x1080:
+
+```
+canvas 760 -> 733 (the limit now reflects the real space)
+grip bottom 1049  vs  status bar top 1050
+document.elementFromPoint(grip centre) -> button#precisionCanvasResizeHandle
 ```
 
-**`z-index` does not rescue it**: an ancestor of the grip, `#panelPrecisionEdit`, carries a
-`backdrop-filter` and is a stacking context of its own (z-index: auto), so in the root context it
-paints in DOM order before the status bar - measured with the grip raised to `z-index: 30` as well.
-The real fix is either to subtract the status bar height from the canvas limit, or to stop the
-workbench panel from overflowing in precision-edit mode.
-
-`scripts/browser/measure-splitters.cjs` hit-tests the grip first and reports
-`the corner grip is covered by div.status-bar` instead of failing spuriously.
+`scripts/browser/measure-splitters.cjs` now asserts exactly that
+(`precision corner grip is reachable`) instead of reporting it as blocked.

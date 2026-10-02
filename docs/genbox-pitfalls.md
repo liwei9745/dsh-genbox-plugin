@@ -108,19 +108,25 @@ OK
 最后一行就是第 7 条的自动化对照：精准改图工作台底部的竖条**只改高度、不改宽度**（h +120、w 0）。
 它需要一张本地图片，可用 `PROBE_IMAGE=<png 路径>` 指定，否则自动取 `.genbox-out` 下最新的 png。
 
-## 9. 精准改图画布右下角抓点可能被状态栏盖住（**未修，已可复现**）
+## 9. 精准改图画布右下角抓点被状态栏吞掉（**已修**）
 
-大画布 + 较矮视口时，画布外壳允许溢出（`precision-edit-active` 下 `overflow: visible`），
-而画布尺寸上限按视口计算、没有扣除底部状态栏（`.status-bar`，min-height 28px，带 `backdrop-filter`）。
-于是画布右下角——也就是那个 44×44 的 `nwse` 抓点所在处——落到了状态栏**下面**：
+**现象**：大画布 + 较矮视口时，画布右下角那个 44×44 的 `nwse` 抓点落在 App 底部状态栏**下面**——
+`document.elementFromPoint()` 返回 `div.status-bar`，pointer 事件永远到不了抓点。
 
-```js
-document.elementFromPoint(gripX, gripY)   // -> div.status-bar（不是抓点）
+**根因**：画布高度上限是**按视口估算**的（`viewportHeight - 120`，见 `precisionCanvasResizeLimits`），
+没有扣除状态栏，也没有参考画布自己的顶边；而精准改图模式下工作台允许溢出，于是它就真的钻了下去。
+
+**`z-index` 不能修**（这条也实测过）：抓点的祖先 `#panelPrecisionEdit` 带 `backdrop-filter`，
+它自己就是层叠上下文，在根上下文里按 DOM 顺序排在状态栏之前；把抓点提到 `z-index: 30` 也无效。
+
+**修法**：新增 `precisionCanvasAvailableHeight(shell)`——量画布顶边到状态栏顶边的真实距离，
+用它作为 `maxHeight`（仍钳在 240–760）。实测 1920×1080：
+
+```
+画布 760 → 733（高度上限改为实测可用空间）
+抓点下沿 1049  vs  状态栏顶 1050
+document.elementFromPoint(抓点中心) -> button#precisionCanvasResizeHandle
 ```
 
-**`z-index` 救不了**：抓点的祖先 `#panelPrecisionEdit` 带 `backdrop-filter`，它自己就是一个
-层叠上下文（z-index: auto），在根上下文里按 DOM 顺序排在状态栏之前；实测把抓点提到 `z-index: 30` 也一样。
-真正的修法是二选一：让画布尺寸上限扣除状态栏高度，或让工作台面板在精准改图模式下不要溢出。
-
-`scripts/browser/measure-splitters.cjs` 会先对抓点做命中测试，遇到这种情况报告
-`the corner grip is covered by div.status-bar` 并跳过，而不是给一个假失败。
+`scripts/browser/measure-splitters.cjs` 现在就断言这件事（`precision corner grip is reachable`），
+而不是像之前那样报 `covered by div.status-bar` 后跳过。

@@ -232,18 +232,29 @@ async function checkPrecisionGrip(browser, viewport) {
     return now
   }
 
-  // The shell usually starts at its maximum width, so shrink first and then grow back.
-  const small = await drag(-160)
-  const large = await drag(80)
+  // What this checks is reachability, not the drag arithmetic: the grip used to sit under
+  // the app status bar, where elementFromPoint() returned the status bar and no pointer
+  // event could ever reach it. The handler's own maths is covered by the static contract
+  // test in the GenBox checkout.
+  const reach = await page.evaluate(() => {
+    const grip = document.getElementById('precisionCanvasResizeHandle')
+    const rect = grip.getBoundingClientRect()
+    const at = document.elementFromPoint(Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2))
+    const statusBar = document.querySelector('.status-bar')?.getBoundingClientRect()
+    const shell = document.getElementById('precisionCanvasShell').getBoundingClientRect()
+    return {
+      hitSelf: at === grip || (at !== null && grip.contains(at)),
+      hitElement: at === null ? null : at.tagName.toLowerCase() + (at.id ? '#' + at.id : ''),
+      gripBottom: Math.round(rect.bottom),
+      statusTop: statusBar ? Math.round(statusBar.top) : null,
+      shellBottom: Math.round(shell.bottom),
+    }
+  })
   await page.close()
-
-  const ratio = (shell) => shell.h / shell.w
-  const shrankBoth = small.shell.w < before0.w - 20 && small.shell.h < before0.h - 20
-  const grewBoth = large.shell.w > small.shell.w + 20 && large.shell.h > small.shell.h + 20
-  const aspectKept = Math.abs(ratio(small) - ratio(before0)) < 0.02 && Math.abs(ratio(large) - ratio(before0)) < 0.02
   return {
-    before: before0, small, large, cursor: before.cursor, dismissed,
-    shrankBoth, grewBoth, aspectKept, ok: shrankBoth && grewBoth && aspectKept,
+    before: before0, cursor: before.cursor, dismissed, ...reach,
+    clearOfStatusBar: reach.statusTop === null || reach.gripBottom <= reach.statusTop,
+    ok: reach.hitSelf && (reach.statusTop === null || reach.gripBottom <= reach.statusTop),
   }
 }
 
@@ -287,12 +298,11 @@ function newestPng() {
   if (grip.skipped) {
     console.log('  [skip] precision corner grip: ' + grip.skipped)
   } else {
-    console.log('  corner grip (' + grip.cursor + ', docs ' + grip.dismissed + '): '
-      + grip.before.shell.w + 'x' + grip.before.shell.h
-      + ' -> -160px ' + grip.small.shell.w + 'x' + grip.small.shell.h
-      + ' -> +80px ' + grip.large.shell.w + 'x' + grip.large.shell.h)
-    console.log('  [' + (grip.ok ? 'ok' : 'FAIL') + '] precision corner grip resizes on a vertical drag'
-      + ' (grew ' + grip.grewBoth + ', shrank ' + grip.shrankBoth + ', aspect kept ' + grip.aspectKept + ')')
+    console.log('  corner grip (' + grip.cursor + ', docs ' + grip.dismissed + '): shell '
+      + grip.before.shell.w + 'x' + grip.before.shell.h + ', grip bottom ' + grip.gripBottom
+      + ', status bar top ' + grip.statusTop)
+    console.log('  [' + (grip.ok ? 'ok' : 'FAIL') + '] precision corner grip is reachable'
+      + ' (elementFromPoint -> ' + grip.hitElement + ', clears the status bar: ' + grip.clearOfStatusBar + ')')
     if (!grip.ok) failures += 1
   }
 
