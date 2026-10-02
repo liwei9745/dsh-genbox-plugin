@@ -1,13 +1,16 @@
 // Read-only evidence board for the GenBox plugin: no model credentials needed.
 //   node scripts/lab.mjs   ->  http://127.0.0.1:3098/
 import { createServer } from 'node:http'
-import { readFile, readdir, stat } from 'node:fs/promises'
+import { readdir, readFile, stat } from 'node:fs/promises'
 import { basename, extname, join, resolve, sep } from 'node:path'
+import { homedir } from 'node:os'
 
 const PORT = Number(process.env.LAB_PORT ?? 3098)
 const ROOT = resolve(import.meta.dirname, '..')
 const OUT_DIR = join(ROOT, '.genbox-out')
 const LIB = join(ROOT, 'lib', 'index.js')
+const BOOT_LOG = join(ROOT, '.lab', 'boot.log')
+const DSH_HOME = process.env.DSH_HOME ?? join(homedir(), '.dsh')
 const GENBOX = process.env.GENBOX_BASE_URL ?? 'http://127.0.0.1:8892'
 
 const IMAGE_EXT = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif'])
@@ -41,6 +44,38 @@ async function collectTools() {
     while ((match = pattern.exec(source)) !== null) names.add(match[1])
     return [...names].sort()
   } catch { return [] }
+}
+
+async function collectReceipt() {
+  const receipt = { url: '', loaded: '', startedAt: '', profiles: [] }
+  try {
+    const info = await stat(BOOT_LOG)
+    receipt.startedAt = info.mtime.toLocaleString()
+    // PowerShell redirection writes UTF-16LE on Windows; decode by BOM.
+    const raw = await readFile(BOOT_LOG)
+    const log = raw.length >= 2 && raw[0] === 0xff && raw[1] === 0xfe
+      ? raw.toString('utf16le')
+      : (raw.length >= 2 && raw[0] === 0xfe && raw[1] === 0xff
+        ? Buffer.from(raw).swap16().toString('utf16le')
+        : raw.toString('utf8'))
+    const urls = [...log.matchAll(/dsh web:\s*(\S+)/g)].map((m) => m[1])
+    const loads = [...log.matchAll(/\[genbox\] plugin loaded \(([^)]*)\)/g)].map((m) => m[1])
+    receipt.url = urls.length > 0 ? urls[urls.length - 1] : ''
+    receipt.loaded = loads.length > 0 ? loads[loads.length - 1] : ''
+    receipt.loadCount = loads.length
+  } catch { /* no boot log yet */ }
+  try {
+    const dirs = await readdir(join(DSH_HOME, 'profiles'), { withFileTypes: true })
+    for (const dir of dirs) {
+      if (!dir.isDirectory()) continue
+      try {
+        const manifest = JSON.parse(await readFile(join(DSH_HOME, 'profiles', dir.name, 'package.json'), 'utf8'))
+        const bundles = manifest.dsh?.profile?.bundles ?? []
+        if (bundles.includes('dsh-genbox-plugin')) receipt.profiles.push(dir.name)
+      } catch { /* profile without a manifest */ }
+    }
+  } catch { /* no profiles dir */ }
+  return receipt
 }
 
 async function collectGenbox() {
@@ -87,13 +122,20 @@ function genboxCards(items) {
 }
 
 async function render() {
-  const [tools, genbox, local] = await Promise.all([collectTools(), collectGenbox(), collectLocal(OUT_DIR, 'out', 3)])
+  const [tools, genbox, local, receipt] = await Promise.all([collectTools(), collectGenbox(), collectLocal(OUT_DIR, 'out', 3), collectReceipt()])
   const providerRows = genbox.ok
     ? genbox.providers.map((p) => '<li>' + esc(p.id) + ' · ' + esc(p.type) + ' · ' + (p.enabled ? 'enabled' : 'disabled') + ' · key: ' + (p.has_key ? 'yes' : 'no') + '</li>').join('')
     : '<li>GenBox 未响应：' + esc(genbox.error) + '</li>'
   const status = genbox.ok
     ? 'GenBox v' + esc(genbox.runtime.version) + ' · ' + esc(genbox.runtime.mode) + ' 模式 · ' + GENBOX + ' · 图库 ' + genbox.items.length + ' 项'
     : 'GenBox 不可达'
+
+  const receiptRows = []
+  receiptRows.push('<li>装载回执：' + (receipt.loaded !== '' ? '<b style="color:#7ee787">已加载</b> —— <code>[genbox] plugin loaded (' + esc(receipt.loaded) + ')</code>' : '<b style="color:#ffa657">启动日志里没有装载回执行</b>') + '</li>')
+  receiptRows.push('<li>启动时间：' + (receipt.startedAt || '未知') + '（日志：.lab/boot.log）</li>')
+  receiptRows.push('<li>已安装该 bundle 的 profile：' + (receipt.profiles.length > 0 ? receipt.profiles.map((p) => '<code>' + esc(p) + '</code>').join('、') : '（无）') + '</li>')
+  receiptRows.push('<li>DSH 会话页：' + (receipt.url ? '<a href="' + esc(receipt.url) + '">' + esc(receipt.url) + '</a>（token 每次重启都会变，这里读的是最新日志）' : '尚未启动') + '</li>')
+  receiptRows.push('<li>GenBox 工作台：<a href="' + GENBOX + '">' + GENBOX + '</a>（画图、看图库、配 provider 都在这里）</li>')
 
   return [
     '<!doctype html><html lang="zh"><head><meta charset="utf-8">',
@@ -104,7 +146,8 @@ async function render() {
     'h1{margin:0 0 4px;font-size:19px}h2{font-size:15px;margin:26px 28px 10px;color:#9fb3d1}',
     '.sub{margin:0;color:#8b93a1;font-size:13px}',
     'section{margin:0 0 8px}.card{background:#161a22;border:1px solid #242a35;border-radius:10px;margin:0 28px;padding:14px 16px}',
-    'ul{margin:6px 0;padding-left:18px}li{margin:2px 0}',
+    'ul{margin:6px 0;padding-left:18px}li{margin:3px 0}',
+    'a{color:#79c0ff}code{background:#0b0d11;border:1px solid #242a35;border-radius:4px;padding:1px 5px;font-size:12.5px}',
     '.tools{columns:3;list-style:none;padding:0}.tools li{font-family:ui-monospace,Consolas,monospace;font-size:12.5px}',
     '.grid{display:flex;flex-wrap:wrap;gap:12px}figure{margin:0;width:150px}',
     'img,video{width:150px;height:110px;object-fit:cover;border-radius:8px;background:#0b0d11;border:1px solid #242a35}',
@@ -113,16 +156,18 @@ async function render() {
     '.empty{color:#5f6672;margin:6px 0}',
     '</style></head><body>',
     '<header><h1>GenBox × DSH 实验室</h1><p class="sub">只展示证据，不需要模型凭据 · ' + status + '</p></header>',
-    '<h2>1. GenBox provider</h2><div class="card"><ul>' + providerRows + '</ul></div>',
-    '<h2>2. 插件注册的工具（' + tools.length + ' 个）</h2><div class="card"><ul class="tools">' + tools.map((t) => '<li>' + esc(t) + '</li>').join('') + '</ul></div>',
-    '<h2>3. GenBox 图库素材</h2><div class="card"><div class="grid">' + genboxCards(genbox.ok ? genbox.items : []) + '</div></div>',
-    '<h2>4. 本地产物 .genbox-out（' + local.length + ' 个）</h2><div class="card"><div class="grid">' + mediaCards(local.slice(0, 60)) + '</div></div>',
-    '<h2>5. 复现命令</h2><div class="card"><pre>cd E:\\AI\\GenBox-dsh',
+    '<h2>1. 插件是否已经在本机 DSH 里启用</h2><div class="card"><ul>' + receiptRows.join('') + '</ul></div>',
+    '<h2>2. GenBox provider</h2><div class="card"><ul>' + providerRows + '</ul></div>',
+    '<h2>3. 插件注册的工具（' + tools.length + ' 个，从 lib/index.js 解析）</h2><div class="card"><ul class="tools">' + tools.map((t) => '<li>' + esc(t) + '</li>').join('') + '</ul></div>',
+    '<h2>4. GenBox 图库素材</h2><div class="card"><div class="grid">' + genboxCards(genbox.ok ? genbox.items : []) + '</div></div>',
+    '<h2>5. 本地产物 .genbox-out（' + local.length + ' 个）</h2><div class="card"><div class="grid">' + mediaCards(local.slice(0, 60)) + '</div></div>',
+    '<h2>6. 复现命令</h2><div class="card"><pre>cd E:\\AI\\GenBox-dsh',
     'node scripts/verify-tools.mjs        # 生图/改图/超分/变体/视频（需 GenBox 8892 + mock 8899）',
     'node scripts/verify-background.mjs   # 非阻塞提交 + genbox_task',
     'node scripts/verify-video-edit.mjs   # 本地 ffmpeg 剪辑（不需要 GenBox）',
-    'node scripts/verify-media.mjs        # 图库 + 提示词优化</pre></div>',
-    '<p class="sub" style="margin:20px 28px 40px">DSH 会话页在 3099（需要模型凭据）；GenBox 工作台在 8892。</p>',
+    'node scripts/verify-media.mjs        # 图库 + 提示词优化',
+    'node scripts/publish.mjs             # 发布预检（不联网改任何东西）</pre></div>',
+    '<p class="sub" style="margin:20px 28px 40px">本看板 3098 · DSH 会话 3099 · GenBox 工作台 8892</p>',
     '</body></html>',
   ].join('\n')
 }
