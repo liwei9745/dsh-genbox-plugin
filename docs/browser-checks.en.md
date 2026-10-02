@@ -23,6 +23,7 @@ instead of producing a false failure.
 | 3 | Precision canvas corner grip | **reachability is the assertion** | - (handler maths is covered by the static contract test) | 1920x1080 | ok |
 | 4 | Precision canvas bottom bar | needs a loaded image and fullscreen | height only: h +120, w 0 | 1920x1080 | ok |
 | 5 | Generate page vertical splitter (narrow) | hit test | when the bar is not laid out, assert the panes still fit the column | 768x900 | ok: panes 312+222=534 within a 721px column (was 490+349=839) |
+| 6 | Generate action visibility + shortcut | - | the button must sit inside the viewport and its panel; with `doGenerate` stubbed, Enter must call it 0 times and Ctrl/Cmd+Enter once | 1920x1080 | ok: button 973..1017 in a panel ending at 1038, viewport 1080 (was bottom 1120) |
 
 ## Reproducing
 

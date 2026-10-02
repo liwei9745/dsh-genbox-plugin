@@ -216,6 +216,50 @@ async function checkLeftSplitter(page) {
   }
 }
 
+/**
+ * The generate action must stay inside the viewport, and Ctrl/Cmd+Enter must start a
+ * generation from inside the prompt box (plain Enter still inserts a newline).
+ */
+async function checkGenerateUx(page) {
+  const visibility = await page.evaluate(() => {
+    const button = document.getElementById('btnGen')
+    const panel = document.getElementById('panelT2I')
+    if (button === null || panel === null) return null
+    const b = button.getBoundingClientRect()
+    const p = panel.getBoundingClientRect()
+    return {
+      buttonTop: Math.round(b.top),
+      buttonBottom: Math.round(b.bottom),
+      panelBottom: Math.round(p.bottom),
+      viewportH: window.innerHeight,
+      insideViewport: b.top >= 0 && b.bottom <= window.innerHeight,
+      insidePanel: b.top >= p.top - 1 && b.bottom <= p.bottom + 1,
+    }
+  })
+  if (visibility === null) return { skipped: 'the generate action or its panel is not present' }
+
+  // Stub the generator: this asserts the wiring without spending a real generation.
+  await page.evaluate(() => {
+    window.__generateCalls = 0
+    window.doGenerate = function () { window.__generateCalls += 1 }
+  })
+  await page.click('#txtPrompt')
+  await page.keyboard.type('harness probe')
+  await page.keyboard.press('Enter')
+  await page.waitForTimeout(150)
+  const plainEnter = await page.evaluate(() => window.__generateCalls)
+  await page.keyboard.press('Control+Enter')
+  await page.waitForTimeout(250)
+  const ctrlEnter = await page.evaluate(() => window.__generateCalls)
+
+  return {
+    visibility,
+    plainEnter,
+    ctrlEnter,
+    ok: visibility.insideViewport && visibility.insidePanel && plainEnter === 0 && ctrlEnter === 1,
+  }
+}
+
 /** The precision workbench's bottom bar must resize the canvas vertically only. */
 async function checkPrecisionCanvas(browser, viewport) {
   const image = process.env.PROBE_IMAGE ?? newestPng()
@@ -426,7 +470,17 @@ function newestPng() {
   })
   await leftPage.waitForTimeout(1800)
   const left = await checkLeftSplitter(leftPage)
+  const generateUx = await checkGenerateUx(leftPage)
   await leftPage.close()
+  if (generateUx.skipped) {
+    console.log('  [skip] generate action: ' + generateUx.skipped)
+  } else {
+    console.log('  generate action: button ' + generateUx.visibility.buttonTop + '..' + generateUx.visibility.buttonBottom
+      + ' in a panel ending at ' + generateUx.visibility.panelBottom + ', viewport ' + generateUx.visibility.viewportH
+      + ' | Enter calls ' + generateUx.plainEnter + ', Ctrl+Enter calls ' + generateUx.ctrlEnter)
+    console.log('  [' + (generateUx.ok ? 'ok' : 'FAIL') + '] generate action stays visible and Ctrl+Enter starts it')
+    if (!generateUx.ok) failures += 1
+  }
   if (left.skipped) {
     console.log('  [skip] left splitter: ' + left.skipped)
   } else {
