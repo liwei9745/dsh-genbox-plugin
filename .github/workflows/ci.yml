@@ -13,10 +13,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+      # package.json pins packageManager, so the explicit corepack call always
+      # resolves the same pnpm the local runs use.
       - run: corepack enable
-      - run: pnpm install --no-frozen-lockfile
-      - run: pnpm run typecheck
-      - run: pnpm run build
+      - run: corepack pnpm install --no-frozen-lockfile
+      - run: corepack pnpm run typecheck
+      - run: corepack pnpm run build
       # One runner for every suite. Suites that need a live GenBox are reported
       # as SKIP here; the annotation renderer and the ffmpeg video editor run for
       # real because the runners ship ffmpeg.

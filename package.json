@@ -2,6 +2,7 @@
   "name": "dsh-genbox-plugin",
   "version": "0.1.0",
   "type": "module",
+  "packageManager": "pnpm@12.8.1",
   "description": "DeepSeek Harness tools for GenBox: image generation/editing (including inpaint, upscale, cutout) and video generation through a local GenBox server.",
   "license": "MIT",
   "author": "liwei9745",
