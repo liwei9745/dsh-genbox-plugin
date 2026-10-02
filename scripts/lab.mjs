@@ -1,6 +1,6 @@
 // Read-only evidence board for the GenBox plugin: no model credentials needed.
 //   node scripts/lab.mjs   ->  http://127.0.0.1:3098/
-import { spawn } from 'node:child_process'
+import { execFileSync, spawn } from 'node:child_process'
 import { createServer } from 'node:http'
 import { readdir, readFile, stat } from 'node:fs/promises'
 import { basename, extname, join, resolve, sep } from 'node:path'
@@ -142,6 +142,37 @@ function genboxCards(items) {
   return cards.length > 0 ? cards.join('') : '<p class="empty">（图库里还没有素材）</p>'
 }
 
+const NPM = process.platform === 'win32' ? 'npm.cmd' : 'npm'
+let publishState = { checkedAt: 0, version: '', failed: false }
+
+/** Registry lookup, cached for a minute so the board stays quick. */
+function registryVersion() {
+  if (Date.now() - publishState.checkedAt < 60000) return publishState
+  let version = ''
+  let failed = false
+  try {
+    version = String(execFileSync(NPM, ['view', 'dsh-genbox-plugin', 'version'], { encoding: 'utf8', stdio: 'pipe', shell: true })).trim()
+  } catch {
+    failed = true
+  }
+  publishState = { checkedAt: Date.now(), version, failed }
+  return publishState
+}
+
+function publishPanel() {
+  const state = registryVersion()
+  if (state.version !== '') {
+    return '<p>npm 上已有 <b>dsh-genbox-plugin@' + esc(state.version) + '</b>：'
+      + '<a href="https://www.npmjs.com/package/dsh-genbox-plugin">npm 页面</a></p>'
+      + '<p class="empty">下一步：关掉所有 agent 会话 → 设置 → 插件市场 → 搜 dsh-genbox-plugin → 安装 → 重启。</p>'
+  }
+  return '<p>尚未发布到 npm。'
+    + (state.failed ? '' : '')
+    + '发布命令：<code>npm publish --access public</code>（开 2FA 的账号会要一次性验证码）'
+    + '，或 <code>NPM_OTP=&lt;6位码&gt; node scripts/publish.mjs --execute</code>。</p>'
+    + '<p class="empty">发布后可用 <code>node scripts/verify-published.mjs</code> 回读校验。</p>'
+}
+
 function verifyPanel() {
   if (verifyState.status === 'running') {
     return '<p>正在运行 <code>scripts/verify-all.mjs</code>（约 40 秒）… <a href="/">刷新</a></p>'
@@ -207,6 +238,7 @@ async function render() {
     'node scripts/verify-media.mjs        # 图库 + 提示词优化',
     'node scripts/publish.mjs             # 发布预检（不联网改任何东西）</pre></div>',
     '<h2>7. 一键复验</h2><div class="card">' + verifyPanel() + '</div>',
+    '<h2>8. 发布状态</h2><div class="card">' + publishPanel() + '</div>',
     '<p class="sub" style="margin:20px 28px 40px">本看板 3098 · DSH 会话 3099 · GenBox 工作台 8892</p>',
     '</body></html>',
   ].join('\n')

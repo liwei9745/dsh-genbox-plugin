@@ -34,6 +34,27 @@ function run(command, args) {
   execFileSync(command, args.map(quote), { encoding: 'utf8', stdio: 'inherit', shell: true })
 }
 
+/** Run npm publish, turning the common 2FA refusal into a clear next step. */
+function npmPublish(args) {
+  try {
+    run(NPM, args)
+  } catch (error) {
+    const text = String(error.stderr ?? '') + String(error.stdout ?? '') + String(error.message ?? '')
+    if (/E403/.test(text) && /(two-factor|2fa|otp)/i.test(text)) {
+      console.error('')
+      console.error('npm refused the publish: this account needs a one-time code, or a granular token that is')
+      console.error('explicitly allowed to bypass 2FA.')
+      console.error('')
+      console.error('  retry with a code:   NPM_OTP=<6-digit code> node scripts/publish.mjs --execute')
+      console.error('  or let npm prompt:   npm publish --access public')
+      console.error('  or use the helper:   powershell -File scripts/publish-with-token.ps1 -Execute')
+      console.error('')
+      process.exit(1)
+    }
+    throw error
+  }
+}
+
 function tryRun(command, args) {
   try {
     return { ok: true, unusable: false, output: String(execFileSync(command, args.map(quote), { encoding: 'utf8', stdio: 'pipe', shell: true })).trim() }
@@ -183,12 +204,12 @@ if (NPM_TOKEN !== '') {
   const rcFile = join(tmpdir(), 'dsh-publish-npmrc-' + Date.now())
   writeFileSync(rcFile, '//registry.npmjs.org/:_authToken=' + NPM_TOKEN + '\n', { encoding: 'utf8', mode: 0o600 })
   try {
-    run(NPM, ['publish', '--access', 'public', '--userconfig', rcFile, ...otpArgs])
+    npmPublish(['publish', '--access', 'public', '--userconfig', rcFile, ...otpArgs])
   } finally {
     rmSync(rcFile, { force: true })
   }
 } else {
-  run(NPM, ['publish', '--access', 'public', ...otpArgs])
+  npmPublish(['publish', '--access', 'public', ...otpArgs])
 }
 
 console.log('')
