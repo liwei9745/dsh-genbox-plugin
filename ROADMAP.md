@@ -34,7 +34,7 @@
 | ~~真实 provider 联调~~ | — | ✅ 四项能力均已实测 |
 | **发布 npm 0.1.2** | **你的一次性密码（OTP）** | 包已构建好（34.9 kB / 7 文件 / shasum `382e1325`），`npm publish` 只差 OTP。两种方式见下 |
 | 装进 desktop profile（新版） | 你重启 DSH NEXT | 命令与回滚见 docs/install.md |
-| 把 GenBox 三个前端修复推上游 | 你同意 | 本地提交 `247f8f8` / `b4feb2d` / `36d9b8a` 已就绪 |
+| ~~把 GenBox 前端修复推上游~~ | — | ✅ 已提 **PR #16**（10 个提交，检查全过，`mergeable_state=clean`），等你在 GitHub 上点 Merge |
 
 ### 发布 0.1.2 的两种方式（都不需要把密钥贴进聊天）
 
@@ -50,7 +50,7 @@ powershell -File scripts\publish-with-token.ps1 -Execute -NpmOnly
 如果你在 npm 上建一个 **Granular Access Token**（读写该包、勾选 bypass 2FA），也可以交给我发布——
 但请只把它填进上面脚本的交互提示，不要贴进对话里。
 
-## 上游修复台账（GenBox 检出，待 push）
+## 上游修复台账（已提交 PR #16，等待合并）
 
 > 这些修复**不在插件仓库内**，而是针对 GenBox 本体（`upstream/GenBox` 检出）。每条都先实测复现、再修、再用真实指针或浏览器断言验收；
 > 明细与根因见 [docs/genbox-pitfalls.md](./docs/genbox-pitfalls.md)，自动化断言见 [docs/browser-checks.md](./docs/browser-checks.md)。
