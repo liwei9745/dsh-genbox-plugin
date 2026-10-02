@@ -5,7 +5,8 @@
 // Suites whose prerequisites are missing (a running GenBox, ffmpeg) are
 // reported as SKIP instead of failing, so this also runs in CI.
 import { spawnSync } from 'node:child_process'
-import { existsSync } from 'node:fs'
+import { existsSync, readdirSync } from 'node:fs'
+import { createRequire } from 'node:module'
 import { join } from 'node:path'
 
 const GENBOX = process.env.GENBOX_BASE_URL ?? 'http://127.0.0.1:8892'
@@ -31,6 +32,23 @@ function installedProfile() {
   const profile = process.env.DSH_PROFILE_DIR
   if (typeof profile !== 'string' || profile === '') return undefined
   return existsSync(join(profile, 'node_modules', 'dsh-genbox-plugin', 'lib', 'index.js')) ? profile : undefined
+}
+
+/** Playwright plus a chromium build: the browser measurement needs both. */
+function browserUp() {
+  try {
+    createRequire(import.meta.url).resolve('playwright')
+  } catch { return false }
+  const roots = [
+    process.env.PLAYWRIGHT_BROWSERS_PATH,
+    process.env.LOCALAPPDATA ? join(process.env.LOCALAPPDATA, 'ms-playwright') : undefined,
+    process.env.HOME ? join(process.env.HOME, '.cache', 'ms-playwright') : undefined,
+  ].filter((root) => typeof root === 'string' && root !== '')
+  return roots.some((root) => {
+    try {
+      return existsSync(root) && readdirSync(root).some((entry) => entry.startsWith('chromium-'))
+    } catch { return false }
+  })
 }
 
 /** Is a zero-cost mock provider enabled? Generation suites must not spend a real key. */
@@ -71,12 +89,14 @@ const suites = [
   { name: 'native job registry', file: 'verify-native-jobs.mjs', needs: ['genbox', 'mock'] },
   { name: 'precision annotations', file: 'verify-precision.mjs', needs: ['genbox', 'mock'] },
   { name: 'user journey (generate → edit → video → cut)', file: 'verify-journey.mjs', needs: ['genbox', 'ffmpeg', 'mock'] },
+  { name: 'browser: splitter trades space', file: 'browser/measure-splitters.cjs', needs: ['genbox', 'browser'] },
   { name: 'real provider (spends a key)', file: 'verify-real-provider.mjs', needs: ['realprovider'] },
 ]
 
 const hasGenbox = await genboxUp()
 const hasFfmpeg = ffmpegUp()
 const hasMock = hasGenbox ? await mockUp() : false
+const hasBrowser = browserUp()
 const hasMarket = marketApp() !== undefined
 const hasInstalled = installedProfile() !== undefined
 // Opt-in: only a live key makes this suite meaningful, and it costs money.
@@ -85,6 +105,7 @@ console.log(
   'prerequisites: genbox=' + (hasGenbox ? 'up' : 'down')
   + ' ffmpeg=' + (hasFfmpeg ? 'ok' : 'missing')
   + ' mock-provider=' + (hasMock ? 'ok' : 'missing')
+  + ' browser=' + (hasBrowser ? 'ok' : 'missing')
   + ' market=' + (hasMarket ? 'ok' : 'missing')
   + ' installed=' + (hasInstalled ? 'ok' : 'set DSH_PROFILE_DIR')
   + ' real-provider=' + (hasRealProvider ? 'ok' : 'off (set GENBOX_REAL_PROVIDER)'),
@@ -95,6 +116,7 @@ for (const suite of suites) {
   const missing = suite.needs.filter((need) => (need === 'genbox' && !hasGenbox)
     || (need === 'ffmpeg' && !hasFfmpeg)
     || (need === 'mock' && !hasMock)
+    || (need === 'browser' && !hasBrowser)
     || (need === 'market' && !hasMarket)
     || (need === 'installed' && !hasInstalled)
     || (need === 'realprovider' && !hasRealProvider))

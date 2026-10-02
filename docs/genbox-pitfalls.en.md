@@ -29,5 +29,15 @@
 ## Reproducing this
 
 No API key needed: the repository ships a zero-cost mock provider, and
-`node scripts/verify-all.mjs` runs 21 suites against it. Real-provider work is opt-in:
+`node scripts/verify-all.mjs` runs the suites against it. Real-provider work is opt-in:
 `GENBOX_REAL_PROVIDER=gpt-image node scripts/verify-real-provider.mjs`.
+
+Items 7 and 8 are measured in a real browser. `scripts/browser/measure-splitters.cjs`
+finds a chromium by itself (Playwright has to be resolvable - point `NODE_PATH` at an
+existing install if needed) and checks the splitter at two viewport sizes:
+
+```
+1920x1080: baseline 643+250=893 | +120 -> 693+200=893 | -240 -> 453+440=893
+1280x800 : baseline 363+250=613 | +120 -> 413+200=613 | -240 -> 180+433=613
+OK
+```

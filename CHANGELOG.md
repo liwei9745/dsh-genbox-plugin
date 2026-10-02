@@ -9,6 +9,10 @@
   所以「下载到的视频」从未被真正解码验证过——之前的断言只查了「文件非空」。现在 mock 在启动时用 ffmpeg 生成
   真实的 2 秒片段（ffmpeg 不可用时回退到占位数据并写明原因）。这条是旅程测试抓出来的。
 - 修正 `genbox_video_edit` 的工具描述：原来只列了 11 种操作里的 6 种（对照自动生成的 `docs/tools.md` 发现）。
+- **浏览器实测工具进仓**：`scripts/browser/measure-splitters.cjs`（自己发现 chromium，测两种视口），并作为
+  `verify-all` 的套件 `browser: splitter trades space`（缺 Playwright 时 SKIP，不拖累 CI）。
+  实测：1920×1080 下 643+250=893 → 693+200=893 → 453+440=893；1280×800 下 363+250=613 → 413+200=613 → 180+433=613，
+  **总和恒定、相邻面板互换空间**。踩坑清单里原先指向 `.lab/`（被 gitignore，读者拿不到）的路径已修正。
 - **新增可复现的验证证据文件**：`docs/verification.md` 由 `node scripts/write-verification.mjs` 跑完
   `verify-all` 后生成，内嵌**该次运行的原始输出**（21 套件全过 + 1 项 opt-in 跳过），并附真实 provider 实测表与
   前端浏览器实测表——任何“已完成”都能顺着这张表复现。同时刷新 `ROADMAP.md` 里过期的状态与

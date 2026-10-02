@@ -91,7 +91,16 @@ OpenAI 的 `/images/variations` 是 DALL·E-2 时代的东西，`gpt-image` 系�
 前端两条可以用无头 Chromium 直接量：
 
 ```powershell
-# 用 npx 缓存里的 playwright + 本机已装的 chromium
+# scripts/browser/measure-splitters.cjs 会自己找 chromium；Playwright 需要可解析
+# （没装就把它指向 npx 缓存里的副本）
 $env:NODE_PATH = "$env:LOCALAPPDATA\npm-cache\_npx\<hash>\node_modules"
-node .lab/pw/verify-splitter.cjs
+node scripts\browser\measure-splitters.cjs
+```
+
+实测输出（两种视口都验证"相邻面板互换空间"）：
+
+```
+1920x1080: baseline 643+250=893 | +120 -> 693+200=893 | -240 -> 453+440=893
+1280x800 : baseline 363+250=613 | +120 -> 413+200=613 | -240 -> 180+433=613
+OK
 ```

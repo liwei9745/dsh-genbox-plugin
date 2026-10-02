@@ -1,6 +1,7 @@
 # 验证证据（可复现）
 
-> 本文件随 `node scripts/verify-all.mjs` 的原始输出生成：复现命令相同，零成本 mock provider，不花真实 Key。
+> 由 `node scripts/write-verification.mjs` 跑完 `scripts/verify-all.mjs` 后生成，下方是该次运行的原始输出。
+> 复现：`node scripts/verify-all.mjs`（零成本 mock provider，不花真实 Key）。
 
 ## 门槛与前置
 
@@ -10,36 +11,37 @@
 | `mock` | 启用了零成本 mock provider | 生成类套件 SKIP（**绝不回退到付费 provider**） |
 | `ffmpeg` | 本机 ffmpeg / ffprobe | 视频编辑套件 SKIP |
 | `market` | 本机 DSH 市场的兼容性模块 | 市场就绪套件 SKIP |
-| `installed` | 已装到某个 profile | 已安装包比对套件 SKIP |
+| `installed` | `DSH_PROFILE_DIR` 指向已装插件的 profile | 已安装包比对套件 SKIP |
 | `realprovider` | 显式设置 `GENBOX_REAL_PROVIDER` | 真实 Key 套件 SKIP（默认永不在 CI 跑） |
 
 ## 最近一次运行（原始输出）
 
 ```
-prerequisites: genbox=up ffmpeg=ok mock-provider=ok market=ok installed=ok real-provider=off (set GENBOX_REAL_PROVIDER)
-.....................
+prerequisites: genbox=up ffmpeg=ok mock-provider=ok browser=ok market=ok installed=ok real-provider=off (set GENBOX_REAL_PROVIDER)
+......................
 
-  PASS presentation contract                         OK (12 checks) (206ms)
-  PASS tool reference matches code                   OK (14 tools documented) (201ms)
-  PASS error messages                                OK (6 checks) (189ms)
-  PASS http robustness                               OK (17 checks) (519ms)
-  PASS plugin market readiness                       OK (4 checks) (304ms)
-  PASS installed package matches                     OK (4 checks) (229ms)
-  PASS plugin load smoke test                        render -> [{"type":"text","text":"{\n  \"gpt-image\": {\n    \"configured\": true,\n    \" (213ms)
-  PASS onboarding (workbench + doctor)               OK (11 checks) (352ms)
-  PASS annotation overlay                            OK (267ms)
-  PASS local video editing                           OK (11/11) (3408ms)
-  PASS doctor self-check                             OK (426ms)
-  PASS image + video tools                           OK (17275ms)
-  PASS edit modes (inpaint + precision)              OK (9 checks) (3138ms)
-  PASS cutout failure surfacing                      cutout surfaced failure: GenBox POST /api/image-tools/cutout failed (HTTP 503): 尚未安装本地抠图模型 (227ms)
-  PASS background jobs                               OK (15447ms)
-  PASS gallery + prompt                              OK (7 checks) (502ms)
-  PASS upscale + variation strategies                OK (10 checks) (39926ms)
-  PASS gallery filters                               OK (7 checks, fixture zebracrossingmur51m9z) (21604ms)
-  PASS native job registry                           OK (10 checks) (16223ms)
-  PASS precision annotations                         OK (18043ms)
-  PASS user journey (generate → edit → video → cut)  OK (18 checks) (45166ms)
+  PASS presentation contract                         OK (12 checks) (216ms)
+  PASS tool reference matches code                   OK (14 tools documented) (215ms)
+  PASS error messages                                OK (6 checks) (203ms)
+  PASS http robustness                               OK (17 checks) (552ms)
+  PASS plugin market readiness                       OK (4 checks) (320ms)
+  PASS installed package matches                     OK (4 checks) (242ms)
+  PASS plugin load smoke test                        render -> [{"type":"text","text":"{\n  \"gpt-image\": {\n    \"configured\": true,\n    \" (228ms)
+  PASS onboarding (workbench + doctor)               OK (11 checks) (356ms)
+  PASS annotation overlay                            OK (272ms)
+  PASS local video editing                           OK (11/11) (3562ms)
+  PASS doctor self-check                             OK (435ms)
+  PASS image + video tools                           OK (17311ms)
+  PASS edit modes (inpaint + precision)              OK (9 checks) (3101ms)
+  PASS cutout failure surfacing                      cutout surfaced failure: GenBox POST /api/image-tools/cutout failed (HTTP 503): 尚未安装本地抠图模型 (226ms)
+  PASS background jobs                               OK (15450ms)
+  PASS gallery + prompt                              OK (7 checks) (495ms)
+  PASS upscale + variation strategies                OK (10 checks) (39878ms)
+  PASS gallery filters                               OK (7 checks, fixture zebracrossingmur5d3h1) (22741ms)
+  PASS native job registry                           OK (10 checks) (16320ms)
+  PASS precision annotations                         OK (20691ms)
+  PASS user journey (generate → edit → video → cut)  OK (18 checks) (47574ms)
+  PASS browser: splitter trades space                OK (12965ms)
   SKIP real provider (spends a key)                  needs realprovider
 
 all runnable suites passed
@@ -62,8 +64,12 @@ all runnable suites passed
 
 | 场景 | 修复前 | 修复后 |
 |---|---|---|
-| 生成页纵向分隔条（`#resizeBottom`，+120px 下拉） | 所有几何量 delta = 0（完全没反应） | `#creatorCanvasRow` 643 → 683px（钳制后不溢出）；-120px 时 643 → 523px |
+| 生成页分隔条 1920x1080（+120px / -240px） | 所有几何量 delta = 0（完全没反应） | 643+250=893 → 693+200=893 → 453+440=893 |
+| 生成页分隔条 1280x800（+120px / -240px） | 同上 | 363+250=613 → 413+200=613 → 180+433=613 |
 | 精准画布右下角抓点（纵向拖动） | 被忽略（只读 `dx`） | 按主导轴生效：向下 400 → 440、向上 400 → 360 |
+
+上面两条由 `scripts/browser/measure-splitters.cjs` 复现（自己找 chromium；Playwright 需可解析），
+它同时是 `verify-all` 里名为 `browser: splitter trades space` 的套件。
 
 ## GenBox 上游测试
 
