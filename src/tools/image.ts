@@ -343,6 +343,14 @@ export function registerImageTools(ctx: Context, client: GenBoxClient, config: C
       model: { type: 'string', description: 'Model id to request. Must belong to the selected provider.' },
       size: { type: 'string', description: "Target canvas for i2i/inpaint, such as '1024x1024'." },
       strength: { type: 'number', description: 'i2i transformation strength (0-1); GenBox defaults to 0.55.' },
+      upscaleTo: {
+        type: 'string',
+        description: "i2i/inpaint only: grow the finished image on the GenBox host, e.g. '2048' or '2048x1536' "
+          + '(reduced to its longest edge, which is what GenBox actually parses). precision_edit refuses this - '
+          + 'upscale its result with genbox_image_upscale instead.',
+      },
+      upscaleMethod: { type: 'string', enum: ['lanczos3', 'bicubic', 'nearest'], description: "Resampling for upscaleTo; defaults to 'lanczos3'." },
+      upscaleRatio: { type: 'string', description: "Aspect ratio for upscaleTo such as '16:9', or 'original' (default)." },
       precisionTargetSize: { type: 'string', description: "precision_edit only: target canvas 'WIDTHxHEIGHT' required by resize mode." },
       precisionOutputSizePolicy: { type: 'string', enum: ['strict', 'fit_crop'], description: "precision_edit resize output policy; defaults to 'strict'." },
       annotations: {
@@ -413,6 +421,15 @@ export function registerImageTools(ctx: Context, client: GenBoxClient, config: C
       if (mode !== 'i2i' && (args.referenceImages ?? []).some((value) => value.trim() !== '')) {
         throw new Error('referenceImages is only for mode=i2i: GenBox takes extra references through image_data_list, '
           + 'which inpaint (single image + mask) and precision_edit (single canvas) reject.')
+      }
+      if (args.upscaleTo !== undefined && args.upscaleTo.trim() !== '') {
+        if (mode === 'precision_edit') {
+          throw new Error('precision_edit refuses post-generation upscaling (precision_upscale_not_allowed): '
+            + 'generate first, then call genbox_image_upscale on the result.')
+        }
+        body.upscale_to = normalizeUpscaleTarget(args.upscaleTo)
+        if (args.upscaleMethod !== undefined) body.upscale_method = args.upscaleMethod
+        if (args.upscaleRatio !== undefined && args.upscaleRatio !== '') body.upscale_ratio = args.upscaleRatio
       }
       if (mode !== 'i2i') body.image_data = await toImageData(args.image)
 

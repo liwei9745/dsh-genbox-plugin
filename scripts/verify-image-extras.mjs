@@ -84,6 +84,44 @@ const autoVariations = await tool('genbox_image_variations').execute(
 check('auto picks native when the provider supports it', autoVariations.strategy === 'native' && (autoVariations.files ?? []).length >= 1)
 console.log('variations auto ->', autoVariations.strategy)
 
+// 6. An edit honours the same upscale target.
+const edited = await tool('genbox_image_edit').execute(
+  {
+    prompt: 'make it dusk, then grow it',
+    image: bareFile,
+    mode: 'i2i',
+    providers: [mock.id],
+    size: '512x512',
+    upscaleTo: '1024x1024',
+  },
+  exec,
+)
+const editedFile = edited.images?.[0]?.file
+check('an i2i edit honours the WxH upscale target',
+  edited.status === 'completed' && present(editedFile) && (await dimensions(editedFile)) === '1024x1024')
+console.log('edit upscaleTo=1024x1024 ->', edited.status, present(editedFile) ? await dimensions(editedFile) : '(no file)')
+
+// 7. precision_edit refuses it with our own reason instead of a raw GenBox 422.
+let precisionRefusal = ''
+try {
+  await tool('genbox_image_edit').execute(
+    {
+      prompt: 'widen the scene',
+      image: bareFile,
+      mode: 'precision_edit',
+      precisionTargetSize: '768x512',
+      upscaleTo: '1024',
+      providers: [mock.id],
+    },
+    exec,
+  )
+} catch (error) {
+  precisionRefusal = error instanceof Error ? error.message : String(error)
+}
+check('precision_edit refuses upscaleTo with our own reason',
+  /precision_upscale_not_allowed/.test(precisionRefusal) && /genbox_image_upscale/.test(precisionRefusal))
+console.log('precision_edit + upscaleTo ->', precisionRefusal.slice(0, 140))
+
 let failures = 0
 for (const [label, ok] of checks) {
   if (!ok) failures += 1

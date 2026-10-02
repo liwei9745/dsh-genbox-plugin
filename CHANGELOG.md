@@ -9,6 +9,12 @@
   所以「下载到的视频」从未被真正解码验证过——之前的断言只查了「文件非空」。现在 mock 在启动时用 ffmpeg 生成
   真实的 2 秒片段（ffmpeg 不可用时回退到占位数据并写明原因）。这条是旅程测试抓出来的。
 - 修正 `genbox_video_edit` 的工具描述：原来只列了 11 种操作里的 6 种（对照自动生成的 `docs/tools.md` 发现）。
+- **新增「GenBox 集成踩坑清单」**：`docs/genbox-pitfalls.md` / `genbox-pitfalls.en.md`，把本轮实测出的 8 个坑
+  （inpaint 声明式门禁、`upscale_to` 的 `int()` 静默降级、变体的遗留协议、429 的每分钟限流、precision_edit 两道门槛、
+  以及两个前端拖拽缺陷）连同**根因与源码位置**一并写下来，并总结出两条通用经验。
+- **`genbox_image_edit` 也支持 `upscaleTo`**（复用同一归一化）：i2i/inpaint 可生成后放大；
+  precision_edit 则给出我们自己的明确拒绝（`precision_upscale_not_allowed`），并提示改用 `genbox_image_upscale`。
+- 套件 `verify-image-extras.mjs` 增至 **10 项断言**（新增 i2i 放大与 precision_edit 拒绝）。
 - **超分（生成后放大）现在真的生效**：GenBox 用 `int(upscale_to)` 解析目标尺寸，传 `"1024x1024"`
   会抛 `invalid literal for int()` 并**静默保留原图**（实测）。`genbox_image_generate` 现在有
   `upscaleTo` / `upscaleMethod` / `upscaleRatio`，并把 `WxH` 归一化成 GenBox 唯一接受的**长边整数**；

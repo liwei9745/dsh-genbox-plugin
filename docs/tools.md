@@ -11,7 +11,7 @@
 | [`genbox_doctor`](#genbox_doctor) | Self-check the local GenBox setup: server reachability, authentication mode, provider and API-key readiness, ffmpeg availability and output-directory writability | 1 |
 | [`genbox_gallery`](#genbox_gallery) | List the most recent items in the GenBox media library (images and videos, newest first) and optionally copy them to a local directory | 6 |
 | [`genbox_health`](#genbox_health) | Check whether the local GenBox server is reachable and report its runtime status | 0 |
-| [`genbox_image_edit`](#genbox_image_edit) | Edit an existing image through a local GenBox server | 14 |
+| [`genbox_image_edit`](#genbox_image_edit) | Edit an existing image through a local GenBox server | 17 |
 | [`genbox_image_generate`](#genbox_image_generate) | Generate images from a text prompt through a local GenBox server | 12 |
 | [`genbox_image_upscale`](#genbox_image_upscale) | Upscale an image locally through GenBox (Lanczos/Bicubic/Nearest) | 5 |
 | [`genbox_image_variations`](#genbox_image_variations) | Ask a GenBox image provider for visual variations of an existing image | 7 |
@@ -84,6 +84,9 @@ Edit an existing image through a local GenBox server. mode=i2i re-renders the wh
 | `model` | string | no | Model id to request. Must belong to the selected provider. |
 | `size` | string | no | Target canvas for i2i/inpaint, such as '1024x1024'. |
 | `strength` | number | no | i2i transformation strength (0-1); GenBox defaults to 0.55. |
+| `upscaleTo` | string | no | i2i/inpaint only: grow the finished image on the GenBox host, e.g. '2048' or '2048x1536' (reduced to its longest edge, which is what GenBox actually parses). precision_edit refuses this - upscale its result with genbox_image_upscale instead. |
+| `upscaleMethod` | one of: `lanczos3` | `bicubic` | `nearest` | no | Resampling for upscaleTo; defaults to 'lanczos3'. |
+| `upscaleRatio` | string | no | Aspect ratio for upscaleTo such as '16:9', or 'original' (default). |
 | `precisionTargetSize` | string | no | precision_edit only: target canvas 'WIDTHxHEIGHT' required by resize mode. |
 | `precisionOutputSizePolicy` | one of: `strict` | `fit_crop` | no | precision_edit resize output policy; defaults to 'strict'. |
 | `annotations` | array of object | no | precision_edit: what to change and where, in source-image pixels. Each entry is drawn as a numbered marker on the overlay GenBox receives. |
