@@ -17,6 +17,15 @@ async function genboxUp() {
   } catch { return false }
 }
 
+/** The DSH desktop installation that carries the plugin market, when there is one. */
+function marketApp() {
+  const candidates = [
+    process.env.DSH_APP_DIR,
+    join(process.env.LOCALAPPDATA ?? '', 'Programs', 'DSH NEXT', 'resources', 'app'),
+  ].filter((candidate) => typeof candidate === 'string' && candidate !== '')
+  return candidates.find((candidate) => existsSync(join(candidate, 'node_modules', 'dshmarket', 'lib', 'compatibility.js')))
+}
+
 function ffmpegUp() {
   try {
     const probe = spawnSync(process.env.FFMPEG_PATH ?? 'ffmpeg', ['-version'], { encoding: 'utf8' })
@@ -27,6 +36,7 @@ function ffmpegUp() {
 const suites = [
   { name: 'presentation contract', file: 'verify-presentation.mjs', needs: [] },
   { name: 'error messages', file: 'verify-errors.mjs', needs: [] },
+  { name: 'plugin market readiness', file: 'verify-market-readiness.mjs', needs: ['market'] },
   { name: 'onboarding (workbench + doctor)', file: 'verify-onboarding.mjs', needs: ['genbox'] },
   { name: 'annotation overlay', file: 'verify-annotate.mjs', needs: [] },
   { name: 'local video editing', file: 'verify-video-edit.mjs', needs: ['ffmpeg'] },
@@ -41,11 +51,18 @@ const suites = [
 
 const hasGenbox = await genboxUp()
 const hasFfmpeg = ffmpegUp()
-console.log('prerequisites: genbox=' + (hasGenbox ? 'up' : 'down') + ' ffmpeg=' + (hasFfmpeg ? 'ok' : 'missing'))
+const hasMarket = marketApp() !== undefined
+console.log(
+  'prerequisites: genbox=' + (hasGenbox ? 'up' : 'down')
+  + ' ffmpeg=' + (hasFfmpeg ? 'ok' : 'missing')
+  + ' market=' + (hasMarket ? 'ok' : 'missing'),
+)
 
 const results = []
 for (const suite of suites) {
-  const missing = suite.needs.filter((need) => (need === 'genbox' && !hasGenbox) || (need === 'ffmpeg' && !hasFfmpeg))
+  const missing = suite.needs.filter((need) => (need === 'genbox' && !hasGenbox)
+    || (need === 'ffmpeg' && !hasFfmpeg)
+    || (need === 'market' && !hasMarket))
   if (missing.length > 0) {
     results.push({ ...suite, status: 'SKIP', detail: 'needs ' + missing.join(', ') })
     continue

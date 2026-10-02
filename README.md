@@ -61,6 +61,8 @@ GenBox 图库素材、本地产物缩略图，以及每条复现命令。
 | M4 | `genbox_video_generate` 视频 | ✅ 端到端实测（mock volcengine provider，下载到本地 mp4） |
 | M5 | `genbox_gallery` / 提示词优化 | ✅ 图库列出并复制；无 LLM provider 时返回原文回退 |
 | M6 | 打包与分发 | ✅ `pnpm pack` → `dsh plugin add <tarball>` → 启动打印 `[genbox] plugin loaded` |
+| M7 | 发布到 npm | ✅ `dsh-genbox-plugin@0.1.0`，并已用**从 npm 安装的那份产物**实跑生图 |
+| M8 | 插件市场就绪性 | ✅ 用**市场自己的模块**验证：`dsh.bundle.patch` 就位、host 兼容（0.2.0-rc.2 → compatible）、profile 预检 0 risks |
 
 ## 安装
 
