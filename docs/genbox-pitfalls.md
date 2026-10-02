@@ -107,3 +107,20 @@ OK
 
 最后一行就是第 7 条的自动化对照：精准改图工作台底部的竖条**只改高度、不改宽度**（h +120、w 0）。
 它需要一张本地图片，可用 `PROBE_IMAGE=<png 路径>` 指定，否则自动取 `.genbox-out` 下最新的 png。
+
+## 9. 精准改图画布右下角抓点可能被状态栏盖住（**未修，已可复现**）
+
+大画布 + 较矮视口时，画布外壳允许溢出（`precision-edit-active` 下 `overflow: visible`），
+而画布尺寸上限按视口计算、没有扣除底部状态栏（`.status-bar`，min-height 28px，带 `backdrop-filter`）。
+于是画布右下角——也就是那个 44×44 的 `nwse` 抓点所在处——落到了状态栏**下面**：
+
+```js
+document.elementFromPoint(gripX, gripY)   // -> div.status-bar（不是抓点）
+```
+
+**`z-index` 救不了**：抓点的祖先 `#panelPrecisionEdit` 带 `backdrop-filter`，它自己就是一个
+层叠上下文（z-index: auto），在根上下文里按 DOM 顺序排在状态栏之前；实测把抓点提到 `z-index: 30` 也一样。
+真正的修法是二选一：让画布尺寸上限扣除状态栏高度，或让工作台面板在精准改图模式下不要溢出。
+
+`scripts/browser/measure-splitters.cjs` 会先对抓点做命中测试，遇到这种情况报告
+`the corner grip is covered by div.status-bar` 并跳过，而不是给一个假失败。

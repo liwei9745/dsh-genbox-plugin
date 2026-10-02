@@ -154,6 +154,99 @@ async function checkPrecisionCanvas(browser, viewport) {
   return { before, after, grew, widened, ok: grew > 60 && Math.abs(widened) <= 2 }
 }
 
+/**
+ * The canvas corner grip is a 44x44 nwse handle (hidden until an image is loaded). A
+ * vertical drag on it must resize the aspect-locked canvas instead of being ignored,
+ * which is what the dominant-axis rule fixed.
+ */
+async function checkPrecisionGrip(browser, viewport) {
+  const image = process.env.PROBE_IMAGE ?? newestPng()
+  if (image === undefined) {
+    return { skipped: 'no source image: set PROBE_IMAGE to a png on disk' }
+  }
+  const page = await browser.newPage({ viewport })
+  await page.goto(BASE + '/', { waitUntil: 'domcontentloaded' })
+  await page.waitForTimeout(3000)
+  await page.evaluate(() => {
+    if (typeof switchNav === 'function') switchNav('generate', document.getElementById('navGen'))
+  })
+  await page.waitForTimeout(800)
+  // Enter the workbench through the app's own tab so it applies its own classes.
+  await page.evaluate(() => document.getElementById('subTabPrecisionEdit')?.click())
+  await page.waitForTimeout(1000)
+  await page.setInputFiles('#precisionFileInput', image).catch(() => {})
+  await page.waitForTimeout(2500)
+
+  // The first visit to the workbench also opens a full-screen docs dialog. While it is
+  // up it legitimately swallows every pointer event, so a fresh browser profile (which
+  // is what a headless run always has) cannot touch the grip until it is dismissed.
+  const dismissed = await page.evaluate(() => {
+    const dialog = document.getElementById('precisionDocsDialog')
+    if (dialog === null) return 'absent'
+    const visible = getComputedStyle(dialog).display !== 'none'
+    if (visible) dialog.style.display = 'none'
+    return visible ? 'dismissed' : 'already hidden'
+  })
+
+  const measure = () => page.evaluate(() => {
+    const shell = document.querySelector('#precisionCanvasShell')?.getBoundingClientRect()
+    const grip = document.querySelector('#precisionCanvasResizeHandle')
+    const gripRect = grip?.getBoundingClientRect()
+    const style = grip === null || grip === undefined ? null : getComputedStyle(grip)
+    return {
+      shell: shell ? { w: Math.round(shell.width), h: Math.round(shell.height) } : null,
+      grip: gripRect ? { x: gripRect.left + gripRect.width / 2, y: gripRect.top + gripRect.height / 2, w: Math.round(gripRect.width) } : null,
+      cursor: style ? style.cursor : null,
+    }
+  })
+
+  const before = await measure()
+  if (before.shell === null || before.grip === null || before.grip.w === 0) {
+    await page.close()
+    return { skipped: 'the corner grip is not reachable in this layout' }
+  }
+  // The workbench may be allowed to overflow, which can push the grip underneath the app
+  // status bar. Hit-test it first: a grip nobody can press cannot be measured.
+  const blockedBy = await page.evaluate(() => {
+    const grip = document.getElementById('precisionCanvasResizeHandle')
+    const rect = grip.getBoundingClientRect()
+    const at = document.elementFromPoint(Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2))
+    if (at === null || at === grip || grip.contains(at)) return null
+    return at.tagName.toLowerCase() + (at.id ? '#' + at.id : (at.className ? '.' + String(at.className).trim().split(/\s+/)[0] : ''))
+  })
+  if (blockedBy !== null) {
+    await page.close()
+    return { skipped: 'the corner grip is covered by ' + blockedBy, blockedBy }
+  }
+  const before0 = { shell: { ...before.shell } }
+
+  const drag = async (dy) => {
+    await page.mouse.move(before.grip.x, before.grip.y)
+    await page.mouse.down()
+    for (let step = 1; step <= 8; step += 1) await page.mouse.move(before.grip.x, before.grip.y + (dy / 8) * step)
+    await page.mouse.up()
+    await page.waitForTimeout(300)
+    const now = await measure()
+    // Re-arm for the next drag: the grip moves with the shell.
+    before.grip = now.grip
+    return now
+  }
+
+  // The shell usually starts at its maximum width, so shrink first and then grow back.
+  const small = await drag(-160)
+  const large = await drag(80)
+  await page.close()
+
+  const ratio = (shell) => shell.h / shell.w
+  const shrankBoth = small.shell.w < before0.w - 20 && small.shell.h < before0.h - 20
+  const grewBoth = large.shell.w > small.shell.w + 20 && large.shell.h > small.shell.h + 20
+  const aspectKept = Math.abs(ratio(small) - ratio(before0)) < 0.02 && Math.abs(ratio(large) - ratio(before0)) < 0.02
+  return {
+    before: before0, small, large, cursor: before.cursor, dismissed,
+    shrankBoth, grewBoth, aspectKept, ok: shrankBoth && grewBoth && aspectKept,
+  }
+}
+
 /** The newest png under .genbox-out, when the suite has produced one. */
 function newestPng() {
   const root = join(__dirname, '..', '..', '.genbox-out')
@@ -190,6 +283,19 @@ function newestPng() {
       + '; top -' + result.shrank + ' / neighbour +' + result.took + ')')
     if (!result.ok) failures += 1
   }
+  const grip = await checkPrecisionGrip(browser, VIEWPORTS[0])
+  if (grip.skipped) {
+    console.log('  [skip] precision corner grip: ' + grip.skipped)
+  } else {
+    console.log('  corner grip (' + grip.cursor + ', docs ' + grip.dismissed + '): '
+      + grip.before.shell.w + 'x' + grip.before.shell.h
+      + ' -> -160px ' + grip.small.shell.w + 'x' + grip.small.shell.h
+      + ' -> +80px ' + grip.large.shell.w + 'x' + grip.large.shell.h)
+    console.log('  [' + (grip.ok ? 'ok' : 'FAIL') + '] precision corner grip resizes on a vertical drag'
+      + ' (grew ' + grip.grewBoth + ', shrank ' + grip.shrankBoth + ', aspect kept ' + grip.aspectKept + ')')
+    if (!grip.ok) failures += 1
+  }
+
   const precision = await checkPrecisionCanvas(browser, VIEWPORTS[0])
   if (precision.skipped) {
     console.log('  [skip] precision canvas: ' + precision.skipped)

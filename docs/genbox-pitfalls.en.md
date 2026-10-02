@@ -45,3 +45,24 @@ OK
 That last line is the automated counterpart of item 7: the precision workbench's bottom bar
 changes the height only (h +120, w 0). It needs a local image - pass `PROBE_IMAGE=<png>` or let
 it pick the newest png under `.genbox-out`.
+
+## 9. The canvas corner grip can end up under the status bar (**not fixed, reproducible**)
+
+With a tall canvas and a short viewport the shell is allowed to overflow
+(`overflow: visible` while `precision-edit-active`), and the canvas size limit is computed from the
+viewport without subtracting the bottom status bar (`.status-bar`, min-height 28px, with a
+`backdrop-filter`). The shell's bottom-right corner - where the 44x44 `nwse` grip sits - therefore lands
+underneath the status bar:
+
+```js
+document.elementFromPoint(gripX, gripY)   // -> div.status-bar (not the grip)
+```
+
+**`z-index` does not rescue it**: an ancestor of the grip, `#panelPrecisionEdit`, carries a
+`backdrop-filter` and is a stacking context of its own (z-index: auto), so in the root context it
+paints in DOM order before the status bar - measured with the grip raised to `z-index: 30` as well.
+The real fix is either to subtract the status bar height from the canvas limit, or to stop the
+workbench panel from overflowing in precision-edit mode.
+
+`scripts/browser/measure-splitters.cjs` hit-tests the grip first and reports
+`the corner grip is covered by div.status-bar` instead of failing spuriously.

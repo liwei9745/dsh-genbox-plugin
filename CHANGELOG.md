@@ -9,6 +9,11 @@
   所以「下载到的视频」从未被真正解码验证过——之前的断言只查了「文件非空」。现在 mock 在启动时用 ffmpeg 生成
   真实的 2 秒片段（ffmpeg 不可用时回退到占位数据并写明原因）。这条是旅程测试抓出来的。
 - 修正 `genbox_video_edit` 的工具描述：原来只列了 11 种操作里的 6 种（对照自动生成的 `docs/tools.md` 发现）。
+- **新发现并如实记录一个未修问题**（踩坑清单第 9 条，中英）：精准改图画布右下角的 44×44 抓点，在
+  大画布 + 较矮视口时会落到 App 底部状态栏**下面**——`document.elementFromPoint()` 返回 `div.status-bar`
+  而不是抓点。实测 `z-index: 30` 也无解（祖先 `#panelPrecisionEdit` 自带 backdrop-filter，
+  本身就是层叠上下文）。浏览器实测工具现在会先做命中测试，报 `the corner grip is covered by div.status-bar`
+  并 **skip 而不是假失败**；真正的修法（画布上限扣除状态栏高度 / 工作台不再溢出）已在文档写明。
 - **浏览器实测工具进仓**：`scripts/browser/measure-splitters.cjs`（自己发现 chromium，测两种视口），并作为
   `verify-all` 的套件 `browser: splitter trades space`（缺 Playwright 时 SKIP，不拖累 CI）。
   实测：1920×1080 下 643+250=893 → 683+210=893 → 443+450=893；1280×800 下 363+250=613 → 403+210=613 → 220+393=613，
