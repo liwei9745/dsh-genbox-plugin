@@ -20,28 +20,28 @@
 prerequisites: genbox=up ffmpeg=ok mock-provider=ok browser=ok market=ok installed=ok real-provider=off (set GENBOX_REAL_PROVIDER)
 ......................
 
-  PASS presentation contract                         OK (12 checks) (196ms)
-  PASS tool reference matches code                   OK (14 tools documented) (195ms)
-  PASS error messages                                OK (6 checks) (191ms)
-  PASS http robustness                               OK (17 checks) (509ms)
-  PASS plugin market readiness                       OK (4 checks) (295ms)
-  PASS installed package matches                     OK (4 checks) (229ms)
-  PASS plugin load smoke test                        render -> [{"type":"text","text":"{\n  \"gpt-image\": {\n    \"configured\": true,\n    \" (213ms)
-  PASS onboarding (workbench + doctor)               OK (11 checks) (326ms)
-  PASS annotation overlay                            OK (246ms)
-  PASS local video editing                           OK (11/11) (3305ms)
-  PASS doctor self-check                             OK (423ms)
-  PASS image + video tools                           OK (17246ms)
+  PASS presentation contract                         OK (12 checks) (194ms)
+  PASS tool reference matches code                   OK (14 tools documented) (203ms)
+  PASS error messages                                OK (6 checks) (195ms)
+  PASS http robustness                               OK (17 checks) (516ms)
+  PASS plugin market readiness                       OK (4 checks) (292ms)
+  PASS installed package matches                     OK (4 checks) (226ms)
+  PASS plugin load smoke test                        render -> [{"type":"text","text":"{\n  \"gpt-image\": {\n    \"configured\": true,\n    \" (212ms)
+  PASS onboarding (workbench + doctor)               OK (11 checks) (318ms)
+  PASS annotation overlay                            OK (248ms)
+  PASS local video editing                           OK (11/11) (3323ms)
+  PASS doctor self-check                             OK (409ms)
+  PASS image + video tools                           OK (17239ms)
   PASS edit modes (inpaint + precision)              OK (9 checks) (3100ms)
-  PASS cutout failure surfacing                      cutout surfaced failure: GenBox POST /api/image-tools/cutout failed (HTTP 503): 尚未安装本地抠图模型 (220ms)
-  PASS background jobs                               OK (15440ms)
-  PASS gallery + prompt                              OK (7 checks) (486ms)
-  PASS upscale + variation strategies                OK (10 checks) (40649ms)
-  PASS gallery filters                               OK (7 checks, fixture zebracrossingmur5l7df) (21391ms)
-  PASS native job registry                           OK (10 checks) (16262ms)
-  PASS precision annotations                         OK (21850ms)
-  PASS user journey (generate → edit → video → cut)  OK (18 checks) (48886ms)
-  PASS browser: splitter trades space                OK (21449ms)
+  PASS cutout failure surfacing                      cutout surfaced failure: GenBox POST /api/image-tools/cutout failed (HTTP 503): 尚未安装本地抠图模型 (218ms)
+  PASS background jobs                               OK (15445ms)
+  PASS gallery + prompt                              OK (7 checks) (492ms)
+  PASS upscale + variation strategies                OK (10 checks) (40686ms)
+  PASS gallery filters                               OK (7 checks, fixture zebracrossingmur634ni) (21399ms)
+  PASS native job registry                           OK (10 checks) (16233ms)
+  PASS precision annotations                         OK (23262ms)
+  PASS user journey (generate → edit → video → cut)  OK (18 checks) (50168ms)
+  PASS browser: splitter trades space                OK (29519ms)
   SKIP real provider (spends a key)                  needs realprovider
 
 all runnable suites passed
@@ -68,6 +68,7 @@ all runnable suites passed
 | 生成页分隔条 1280x800（+120px / -240px） | 同上 | 363+250=613 → 403+210=613 → 220+393=613 |
 | 精准画布右下角抓点（纵向拖动） | 被忽略（只读 `dx`） | 按主导轴生效：向下 400 → 440、向上 400 → 360 |
 | 精准画布底部竖条（纵向拖动） | — | 1013x626 → 1013x746（h +120、w 0，只改高度） |
+| 精准画布右下角抓点可达性 | 命中 `div.status-bar`（画布钻到状态栏下面） | 命中 `button#precisionCanvasResizeHandle`；画布上限 760 → 733，抓点下沿 1049 vs 状态栏顶 1050 |
 
 上面两条由 `scripts/browser/measure-splitters.cjs` 复现（自己找 chromium；Playwright 需可解析），
 它同时是 `verify-all` 里名为 `browser: splitter trades space` 的套件。
