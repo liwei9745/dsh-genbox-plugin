@@ -2,6 +2,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import { GenBoxClient } from './client.js'
 import { Config, type Config as GenBoxConfig } from './config.js'
+import { registerDoctorTool } from './tools/doctor.js'
 import { registerImageTools } from './tools/image.js'
 import { registerImageToolbox } from './tools/image-extra.js'
 import { registerMediaTools } from './tools/media.js'
@@ -42,6 +43,7 @@ export function apply(ctx: Context, config: GenBoxConfig) {
   console.log('[genbox] plugin loaded (baseUrl=' + client.baseUrl + ')')
 
   registerProviderTools(ctx, client)
+  registerDoctorTool(ctx, client, config)
   registerImageTools(ctx, client, config)
   registerImageToolbox(ctx, client, config)
   registerVideoTools(ctx, client, config)

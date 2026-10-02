@@ -258,3 +258,21 @@ verify-precision.mjs: 本地路径守卫 ok / model 守卫 ok
 **为什么"停在 provider 门槛"就是通过**：GenBox 先校验请求信封（annotation 三件套、尺寸一致性、契约字段），
 再校验 provider 授权。如果我们的批注结构有问题，会在**第一步**就报 contract 错误；实际报的是第二步的门槛，
 说明信封是合法的。缺少"真实已验证改图模型"是 GenBox 的授权设计，不是插件缺陷。
+
+### 第 9 轮（社区排障：genbox_doctor）
+
+新增自检工具 `genbox_doctor`：一次调用给出"可达性 / 认证模式 / provider 与 Key 就绪度 / 输出目录可写 /
+ffmpeg 与 ffprobe"，每条失败都附可执行的修复建议。目的是让社区用户遇到问题时**先自检**，而不是贴一段 HTTP 报错。
+
+实测（[scripts/verify-doctor.mjs](scripts/verify-doctor.mjs)）：
+
+```
+健康环境：no blocking problems
+  [ok] GenBox reachable / Authentication(dev) / Runtime v2.6.12
+  [ok] Providers: 2 enabled, 2 with a key (1 image, 1 video)
+  [ok] Output directory writable / ffmpeg / ffprobe
+故障环境（baseUrl 指向死端口）：blocking problem found
+  [fail] GenBox reachable: cannot reach http://127.0.0.1:9 (fetch failed) + fix 建议
+  [fail] Providers
+OK
+```

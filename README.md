@@ -83,6 +83,7 @@ dsh plugin --profile <profile> add github:<you>/GenBox-dsh
 
 | 工具 | 作用 |
 |---|---|
+| `genbox_doctor` | **自检**：可达性、认证模式、provider/Key 就绪、输出目录可写、ffmpeg 是否可用，并给出修复建议 |
 | `genbox_health` | 探测 GenBox 是否在线 |
 | `genbox_providers` | 列出 provider / 模型 / 能力（调用前先查能力） |
 | `genbox_image_generate` | 文生图，可多 provider 并排、多张、指定尺寸质量 |
