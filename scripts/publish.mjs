@@ -3,10 +3,14 @@
 //   node scripts/publish.mjs             # preflight only, changes nothing
 //   node scripts/publish.mjs --execute   # create the GitHub repo, push, publish to npm
 //
-// The script never stores credentials; it uses whatever 'gh' and 'npm' are
-// already logged in with.
+// Two credential modes are supported:
+//   * gh CLI logged in (gh auth login)  and/or  npm login
+//   * plain tokens in the environment:   GH_TOKEN (repo scope) and/or NPM_TOKEN
+// The script never stores credentials itself.
 import { execFileSync } from 'node:child_process'
-import { readFileSync } from 'node:fs'
+import { readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 
 const NAME = 'dsh-genbox-plugin'
 const TOPICS = ['dsh-plugin', 'deepseek-harness', 'genbox', 'cordis-plugin', 'image-generation', 'video-generation']
@@ -14,8 +18,9 @@ const DESCRIPTION = 'DeepSeek Harness tools for GenBox: image generation/editing
 const execute = process.argv.includes('--execute')
 // Windows ships npm as a .cmd shim, which execFileSync cannot launch without the extension.
 const NPM = process.platform === 'win32' ? 'npm.cmd' : 'npm'
+const GH_TOKEN = process.env.GH_TOKEN ?? process.env.GITHUB_TOKEN ?? ''
+const NPM_TOKEN = process.env.NPM_TOKEN ?? ''
 
-// Node refuses to spawn .cmd shims without a shell, so every call goes through one.
 function quote(arg) {
   const value = String(arg)
   return /[\s"]/.test(value) ? '"' + value.replace(/"/g, '\\"') + '"' : value
@@ -49,12 +54,11 @@ const branch = tryRun('git', ['rev-parse', '--abbrev-ref', 'HEAD'])
 record('on a branch', branch.ok, branch.output)
 
 const remote = tryRun('git', ['remote', 'get-url', 'origin'])
-record('origin remote', true, remote.ok ? remote.output : 'not set - gh repo create will add it')
+record('origin remote', true, remote.ok ? remote.output : 'not set - the release step adds it')
 
 const pack = tryRun(NPM, ['pack', '--dry-run', '--json'])
 let packedFiles = []
 if (pack.ok) {
-  // 'prepare' may print build output before the JSON payload; keep the last JSON array.
   const start = pack.output.indexOf('[')
   const end = pack.output.lastIndexOf(']')
   try {
@@ -73,13 +77,17 @@ record(
 )
 
 const ghVersion = tryRun('gh', ['--version'])
-record('gh installed', ghVersion.ok, ghVersion.ok ? ghVersion.output.split('\n')[0] : 'install: winget install GitHub.cli')
+const ghMode = ghVersion.ok ? 'gh CLI' : (GH_TOKEN !== '' ? 'GH_TOKEN' : '')
+record('GitHub credentials', ghMode !== '', ghMode === '' ? 'run: gh auth login, or set GH_TOKEN' : ('via ' + ghMode))
 
-const ghAuth = ghVersion.ok ? tryRun('gh', ['auth', 'status']) : { ok: false, output: 'gh missing' }
-record('gh authenticated', ghAuth.ok, ghAuth.ok ? 'yes' : 'run: gh auth login')
+if (ghVersion.ok) {
+  const ghAuth = tryRun('gh', ['auth', 'status'])
+  record('gh authenticated', ghAuth.ok, ghAuth.ok ? 'yes' : 'run: gh auth login (or set GH_TOKEN)')
+}
 
 const npmAuth = tryRun(NPM, ['whoami'])
-record('npm authenticated', npmAuth.ok && npmAuth.output !== '', npmAuth.ok ? npmAuth.output : 'run: npm login (or set NPM_TOKEN)')
+const npmMode = npmAuth.ok && npmAuth.output !== '' ? 'npm login (' + npmAuth.output + ')' : (NPM_TOKEN !== '' ? 'NPM_TOKEN' : '')
+record('npm credentials', npmMode !== '', npmMode === '' ? 'run: npm login, or set NPM_TOKEN' : ('via ' + npmMode))
 
 // ---------------------------------------------------------------- report
 console.log('')
@@ -89,15 +97,14 @@ for (const check of checks) {
 }
 
 const blockers = checks.filter((check) => !check.ok)
-const repo = 'https://github.com/<owner>/' + NAME
 
 console.log('')
 console.log('== plan ==')
 console.log('  1. npm pack                                    (verify the tarball again)')
-console.log('  2. gh repo create <owner>/' + NAME + ' --public --source . --push')
-console.log('  3. gh repo edit --add-topic ' + TOPICS.join(' --add-topic '))
+console.log('  2. create ' + NAME + ' on GitHub, push the current branch')
+console.log('  3. add topics: ' + TOPICS.join(', '))
 console.log('  4. npm publish --access public')
-console.log('  5. npm view ' + NAME + ' version   and   gh repo view --json url,repositoryTopics')
+console.log('  5. verify with npm view ' + NAME + ' version and the repository page')
 console.log('')
 console.log('  posts to write by hand afterwards:')
 console.log('    - DSH Discussions: docs/community/discussions-post.md')
@@ -117,11 +124,61 @@ if (blockers.length > 0) {
 }
 
 // ---------------------------------------------------------------- execute
+const branchName = branch.output
+
+async function releaseWithToken(token) {
+  const headers = {
+    Authorization: 'Bearer ' + token,
+    Accept: 'application/vnd.github+json',
+    'User-Agent': 'dsh-genbox-plugin-publish',
+    'Content-Type': 'application/json',
+  }
+  const who = await fetch('https://api.github.com/user', { headers })
+  if (!who.ok) throw new Error('GitHub token rejected: ' + who.status)
+  const owner = (await who.json()).login
+  const create = await fetch('https://api.github.com/user/repos', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ name: NAME, description: DESCRIPTION, private: false, has_issues: true }),
+  })
+  if (!create.ok && create.status !== 422) {
+    throw new Error('repository creation failed: ' + create.status + ' ' + (await create.text()).slice(0, 200))
+  }
+  const topics = await fetch('https://api.github.com/repos/' + owner + '/' + NAME + '/topics', {
+    method: 'PUT',
+    headers,
+    body: JSON.stringify({ names: TOPICS }),
+  })
+  if (!topics.ok) throw new Error('topic update failed: ' + topics.status + ' ' + (await topics.text()).slice(0, 200))
+  tryRun('git', ['remote', 'remove', 'origin'])
+  run('git', ['remote', 'add', 'origin', 'https://github.com/' + owner + '/' + NAME + '.git'])
+  run('git', ['push', 'https://x-access-token:' + token + '@github.com/' + owner + '/' + NAME + '.git', 'HEAD:refs/heads/' + branchName])
+  return owner
+}
+
 console.log('')
-run('gh', ['repo', 'create', NAME, '--public', '--source', '.', '--push', '--description', DESCRIPTION])
-run('gh', ['repo', 'edit', ...TOPICS.flatMap((topic) => ['--add-topic', topic])])
-run(NPM, ['publish', '--access', 'public'])
+let owner = ''
+if (GH_TOKEN !== '') {
+  owner = await releaseWithToken(GH_TOKEN)
+  console.log('repository ready: https://github.com/' + owner + '/' + NAME)
+} else {
+  run('gh', ['repo', 'create', NAME, '--public', '--source', '.', '--push', '--description', DESCRIPTION])
+  run('gh', ['repo', 'edit', ...TOPICS.flatMap((topic) => ['--add-topic', topic])])
+}
+
+if (NPM_TOKEN !== '') {
+  const rcFile = join(tmpdir(), 'dsh-publish-npmrc-' + Date.now())
+  writeFileSync(rcFile, '//registry.npmjs.org/:_authToken=' + NPM_TOKEN + '\n', { encoding: 'utf8', mode: 0o600 })
+  try {
+    run(NPM, ['publish', '--access', 'public', '--userconfig', rcFile])
+  } finally {
+    rmSync(rcFile, { force: true })
+  }
+} else {
+  run(NPM, ['publish', '--access', 'public'])
+}
+
 console.log('')
 console.log('published. verify with:')
 console.log('  npm view ' + NAME + ' version')
-console.log('  gh repo view --json url,repositoryTopics')
+console.log('  the repository Topics should list dsh-plugin')
