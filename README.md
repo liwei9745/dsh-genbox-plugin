@@ -10,6 +10,7 @@
 
 **English: [README.en.md](./README.en.md)**
 
+全部工具的参数速查见 [docs/tools.md](./docs/tools.md)（**由代码自动生成**，不会和实现漂移）；
 调研结论与设计见 [PLAN.md](./PLAN.md)；**内部结构与如何加工具**见 [docs/architecture.md](./docs/architecture.md)；
 安装、配置与排错见 [docs/install.md](./docs/install.md)；本机联调环境（含免 Key 的 mock provider）见
 [docs/local-dev.md](./docs/local-dev.md)；发布流程见 [docs/releasing.md](./docs/releasing.md)。

@@ -42,6 +42,7 @@ function ffmpegUp() {
 
 const suites = [
   { name: 'presentation contract', file: 'verify-presentation.mjs', needs: [] },
+  { name: 'tool reference matches code', file: 'tool-reference.mjs', needs: [] },
   { name: 'error messages', file: 'verify-errors.mjs', needs: [] },
   { name: 'http robustness', file: 'verify-http-robustness.mjs', needs: [] },
   { name: 'plugin market readiness', file: 'verify-market-readiness.mjs', needs: ['market'] },

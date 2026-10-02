@@ -2,7 +2,9 @@
 
 ## 0.1.2 — 2026-10-02
 
-- **套件补齐到 18 个**：把三个一直没接进 `verify-all` 的脚本（`verify-plugin` 最小加载、
+- 新增 [docs/tools.md](./docs/tools.md)：**由已注册的工具定义自动生成**的参数速查；`node scripts/tool-reference.mjs`
+  在文件与代码不一致时失败（已纳入套件），所以文档不会漂移。
+- **套件补齐到 19 个**：把三个一直没接进 `verify-all` 的脚本（`verify-plugin` 最小加载、
   `verify-edit-modes` inpaint/精准改图、`verify-cutout` 失败透出）正式纳入，不再默默腐烂。
 - 新增 [docs/architecture.md](./docs/architecture.md)：模块职责、一次调用的生命周期、bundle 补丁机制、
   加新工具的步骤与验证阶梯。
