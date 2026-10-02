@@ -11,6 +11,17 @@ import { join } from 'node:path'
 
 const GENBOX = process.env.GENBOX_BASE_URL ?? 'http://127.0.0.1:8892'
 
+/** How to satisfy a missing prerequisite, printed with every skip. */
+const HOW_TO_PROVIDE = {
+  genbox: 'start GenBox on ' + GENBOX + ' (APP_MODE=dev, see docs/local-dev.md)',
+  mock: 'enable the zero-cost mock provider in GenBox (docs/local-dev.md section 4)',
+  ffmpeg: 'install ffmpeg and ffprobe on PATH',
+  market: 'install DSH NEXT so its market compatibility module is available',
+  installed: 'set DSH_PROFILE_DIR to a profile that already has dsh-genbox-plugin installed',
+  browser: 'make Playwright resolvable and install a chromium build, or set NODE_PATH to an existing install',
+  realprovider: 'set GENBOX_REAL_PROVIDER=<provider id>; this suite spends a real key',
+}
+
 async function genboxUp() {
   try {
     const response = await fetch(GENBOX + '/api/setup/status', { signal: AbortSignal.timeout(2500) })
@@ -121,7 +132,13 @@ for (const suite of suites) {
     || (need === 'installed' && !hasInstalled)
     || (need === 'realprovider' && !hasRealProvider))
   if (missing.length > 0) {
-    results.push({ ...suite, status: 'SKIP', detail: 'needs ' + missing.join(', ') })
+    // A skip must be auditable: say what is missing and how to provide it, so "SKIP"
+    // never hides an unverified area.
+    results.push({
+      ...suite,
+      status: 'SKIP',
+      detail: missing.map((need) => need + ' (' + (HOW_TO_PROVIDE[need] ?? 'unknown prerequisite') + ')').join('; '),
+    })
     continue
   }
   const started = Date.now()
