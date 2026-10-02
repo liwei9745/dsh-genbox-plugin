@@ -1,4 +1,4 @@
-﻿# 鏈湴寮€鍙戜笌鑱旇皟鐜
+# 鏈湴寮€鍙戜笌鑱旇皟鐜
 
 鏈枃璁板綍鍦?`E:\AI\GenBox-dsh` 閲岃窇閫?鎻掍欢 鈫?GenBox"闂幆鐨勬瘡涓€姝ワ紝鍖呭惈涓€涓?*鏈満鐗规湁鐨勭幆澧冨潙**鍙婂叾淇銆?
 ## 1. 渚濊禆
@@ -99,3 +99,35 @@ dsh --profile genbox-dev --port 3099                    # 瀹炴満鍚姩
 ```
 
 - 鍥犱负鍖呭０鏄庝簡 `dsh.bundle`锛宍dsh plugin add` 浼氳嚜鍔ㄦ妸瀹冭拷鍔犺繘 `dsh.profile.bundles`銆?- `--dump-config` 閲屽簲鍑虹幇 `# == dsh-genbox-plugin` 灞備笌 `- id: genbox` 琛屻€?- pnpm 浼氳鍛?linked 鍖呬笉浠庣洰鏍?`node_modules` 瑙ｆ瀽 peer锛涙湰浠撳簱鑷甫鍚岀増鏈?devDependencies锛岃繍琛屾湡澶熺敤銆?*姝ｅ紡鍒嗗彂璧?npm 瀹夎鏃讹紝peer 浼氫粠 profile 鐨?`node_modules` 姝ｅ父瑙ｆ瀽**銆?- 瑕佽杩?Desktop锛坄--profile desktop`锛夐渶瑕侀噸鍚?DSH NEXT 鎵嶇敓鏁堛€?
+## 8. 已知环境问题：构建目录被系统收走权限
+
+**现象**：`pnpm run build` 报 `拒绝访问。 (os error 5)`（rolldown 的 `--clean` 删不掉旧输出），
+`Remove-Item -Recurse -Force lib` 同样失败。
+
+**诊断**（用会话自带的 `diagnose-windows-sandbox-acl` 技能脚本跑的）：
+
+```
+PATH=E:\AI\GenBox-dsh\lib
+  OWNER=S-1-5-32-544 (BUILTIN\Administrators)  IS_CURRENT_USER=False
+  MY_RIGHTS=[]  WRITE_DAC=False  WRITE_OWNER=False
+VERDICT=PRECONDITION     REPAIR_REFUSED (needs WRITE_DAC)
+```
+
+也就是说这个目录的所有者变成了「管理员组」，当前用户没有任何权限，脚本也就无法自动修权限。
+
+**应急绕过**（不需要管理员，利用父目录的删除子项权限）：
+
+```powershell
+Rename-Item 'E:\AI\GenBox-dsh\lib' 'lib-locked-<日期>'   # 把它搬开
+pnpm run build                                              # 重新生成一个属于你的 lib
+```
+
+**彻底清理**（需要管理员权限的 PowerShell）：
+
+```powershell
+takeown /f 'E:\AI\GenBox-dsh\lib-locked-<日期>' /r /d y
+icacls 'E:\AI\GenBox-dsh\lib-locked-<日期>' /grant "$env:USERNAME:(F)" /t
+Remove-Item -Recurse -Force 'E:\AI\GenBox-dsh\lib-locked-<日期>'
+```
+
+诊断原始记录保存在 `.lab/acl-report/acl-report-*.jsonl`（已 gitignore）。

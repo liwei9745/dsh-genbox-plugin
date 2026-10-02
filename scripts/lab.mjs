@@ -159,14 +159,36 @@ function registryVersion() {
   return publishState
 }
 
-function publishPanel() {
+const REPO_URL = 'https://github.com/liwei9745/dsh-genbox-plugin'
+let repoState = { checkedAt: 0, exists: false }
+
+/** Does the GitHub repository exist yet? Cached for a minute. */
+async function githubRepoState() {
+  if (Date.now() - repoState.checkedAt < 60000) return repoState
+  let exists = false
+  try {
+    const response = await fetch(REPO_URL, { method: 'HEAD', redirect: 'manual' })
+    exists = response.status === 200
+  } catch {
+    exists = false
+  }
+  repoState = { checkedAt: Date.now(), exists }
+  return repoState
+}
+
+async function publishPanel() {
   const state = registryVersion()
+  const repo = await githubRepoState()
+  const repoLine = repo.exists
+    ? '<p>GitHub 仓库：<a href="' + REPO_URL + '">' + REPO_URL + '</a></p>'
+    : '<p>GitHub 仓库：尚未创建（需要 <code>GH_TOKEN</code>，或你手动在网页上建一个空仓库）</p>'
   if (state.version !== '') {
     return '<p>npm 上已有 <b>dsh-genbox-plugin@' + esc(state.version) + '</b>：'
       + '<a href="https://www.npmjs.com/package/dsh-genbox-plugin">npm 页面</a></p>'
+      + repoLine
       + '<p class="empty">下一步：关掉所有 agent 会话 → 设置 → 插件市场 → 搜 dsh-genbox-plugin → 安装 → 重启。</p>'
   }
-  return '<p>尚未发布到 npm。'
+  return repoLine + '<p>尚未发布到 npm。'
     + (state.failed ? '' : '')
     + '发布命令：<code>npm publish --access public</code>（开 2FA 的账号会要一次性验证码）'
     + '，或 <code>NPM_OTP=&lt;6位码&gt; node scripts/publish.mjs --execute</code>。</p>'
@@ -191,6 +213,7 @@ function verifyPanel() {
 
 async function render() {
   const [tools, genbox, local, receipt] = await Promise.all([collectTools(), collectGenbox(), collectLocal(OUT_DIR, 'out', 3), collectReceipt()])
+  const publishHtml = await publishPanel()
   const providerRows = genbox.ok
     ? genbox.providers.map((p) => '<li>' + esc(p.id) + ' · ' + esc(p.type) + ' · ' + (p.enabled ? 'enabled' : 'disabled') + ' · key: ' + (p.has_key ? 'yes' : 'no') + '</li>').join('')
     : '<li>GenBox 未响应：' + esc(genbox.error) + '</li>'
@@ -238,7 +261,7 @@ async function render() {
     'node scripts/verify-media.mjs        # 图库 + 提示词优化',
     'node scripts/publish.mjs             # 发布预检（不联网改任何东西）</pre></div>',
     '<h2>7. 一键复验</h2><div class="card">' + verifyPanel() + '</div>',
-    '<h2>8. 发布状态</h2><div class="card">' + publishPanel() + '</div>',
+    '<h2>8. 发布状态</h2><div class="card">' + publishHtml + '</div>',
     '<p class="sub" style="margin:20px 28px 40px">本看板 3098 · DSH 会话 3099 · GenBox 工作台 8892</p>',
     '</body></html>',
   ].join('\n')
