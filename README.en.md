@@ -8,9 +8,10 @@ Bring a local [GenBox](https://github.com/liwei9745/GenBox) media server (FastAP
 generation) into [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) as agent tools: generate images,
 edit them, generate video, and cut video locally - plus the media library and prompt assistant.
 
-Design notes live in [PLAN.md](./PLAN.md); install, configuration and troubleshooting in [docs/install.md](./docs/install.md);
-the local development environment (including a zero-API-key mock provider) in [docs/local-dev.md](./docs/local-dev.md)
-(Chinese); the English install and troubleshooting guide is [docs/install.en.md](./docs/install.en.md).
+Design notes live in [PLAN.md](./PLAN.md); the internal layout and how to add a tool in
+[docs/architecture.md](./docs/architecture.md); install, configuration and troubleshooting in [docs/install.md](./docs/install.md)
+(English: [docs/install.en.md](./docs/install.en.md)); the local development environment (including a zero-API-key mock
+provider) in [docs/local-dev.md](./docs/local-dev.md) (Chinese); the release process in [docs/releasing.md](./docs/releasing.md).
 
 ## Quick start (30 seconds)
 

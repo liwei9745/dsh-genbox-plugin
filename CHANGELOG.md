@@ -1,7 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.1.2 — 2026-10-02
 
+- **套件补齐到 18 个**：把三个一直没接进 `verify-all` 的脚本（`verify-plugin` 最小加载、
+  `verify-edit-modes` inpaint/精准改图、`verify-cutout` 失败透出）正式纳入，不再默默腐烂。
+- 新增 [docs/architecture.md](./docs/architecture.md)：模块职责、一次调用的生命周期、bundle 补丁机制、
+  加新工具的步骤与验证阶梯。
 - **更抗抖的轮询**：视频任务动辄几分钟，轮询期间掉一次（5xx / 429 / 408 / 网络抖动）不再让整个工具调用失败——
   连续失败超过预算（默认 5 次）才放弃；**永久性拒绝（4xx）仍然立即失败**，取消语义不变。
 - **报错引用人话**：GenBox 的失败体有 `{"detail": "..."}`、`{"detail": {"error": code, "message": text}}`

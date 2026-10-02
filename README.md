@@ -10,8 +10,9 @@
 
 **English: [README.en.md](./README.en.md)**
 
-调研结论与设计见 [PLAN.md](./PLAN.md)；安装、配置与排错见 [docs/install.md](./docs/install.md)；
-本机联调环境（含免 Key 的 mock provider）见 [docs/local-dev.md](./docs/local-dev.md)。
+调研结论与设计见 [PLAN.md](./PLAN.md)；**内部结构与如何加工具**见 [docs/architecture.md](./docs/architecture.md)；
+安装、配置与排错见 [docs/install.md](./docs/install.md)；本机联调环境（含免 Key 的 mock provider）见
+[docs/local-dev.md](./docs/local-dev.md)；发布流程见 [docs/releasing.md](./docs/releasing.md)。
 
 ## 30 秒上手
 
