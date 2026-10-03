@@ -32,6 +32,13 @@ export interface Config {
   videoEncoder: string
   /** Experimental: hand background video jobs to the DSH job registry (ctx.jobs) instead of plain polling. */
   nativeJobs: boolean
+  /**
+   * Show generated images inside the conversation by committing them as DSH attachments.
+   * Off = the tools report file paths only. Has no effect where no attachment service is mounted.
+   */
+  previewInChat: boolean
+  /** How many images per call are attached for display (the rest are still written to disk). */
+  previewLimit: number
 }
 
 export const Config: Schema<Config> = Schema.object({
@@ -48,4 +55,6 @@ export const Config: Schema<Config> = Schema.object({
   ffprobePath: Schema.string().default('ffprobe'),
   videoEncoder: Schema.string().default(''),
   nativeJobs: Schema.boolean().default(false),
+  previewInChat: Schema.boolean().default(true),
+  previewLimit: Schema.number().default(4),
 })

@@ -5,7 +5,9 @@ import type { Context } from '@deepseek-ai/cordis'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import type { GenBoxClient } from '../client.js'
 import type { Config } from '../config.js'
+import type { JsonObject } from '../json.js'
 import { galleryFilename, listProviders, resolveOutputDir, toImageData } from '../media.js'
+import { previewBlocks, previewRefs } from '../preview.js'
 
 const TERMINAL_STATUSES = new Set(['completed', 'failed', 'cancelled'])
 
@@ -95,6 +97,8 @@ type ImageBatch = {
   elapsedSeconds: number
   images: ImageOutcome[]
   failures: ImageFailure[]
+  /** Attachment refs for the produced images, so the conversation can show them inline. */
+  previews?: JsonObject[]
 }
 
 /** Pick the providers a request should target. */
@@ -138,6 +142,7 @@ export function normalizeUpscaleTarget(value: string): string {
 
 /** Submit a generation and wait for its terminal state. */
 export async function runGeneration(
+  ctx: Context,
   client: GenBoxClient,
   config: Config,
   body: Record<string, unknown>,
@@ -181,6 +186,11 @@ export async function runGeneration(
       })
     }
   }
+  // Commit the files as DSH attachments so the chat renders them; a missing attachment
+  // service or an oversized image only costs the preview, never the generation.
+  const previews = config.previewInChat === false
+    ? []
+    : await previewRefs(ctx, images.map((image) => image.file), config.previewLimit)
   return {
     background: false,
     generationId,
@@ -188,6 +198,7 @@ export async function runGeneration(
     elapsedSeconds: final.elapsed_seconds ?? 0,
     images,
     failures,
+    previews,
   }
 }
 
@@ -225,10 +236,12 @@ function renderBatch(headline: string, value: ImageBatch) {
   }
   if (value.images.length === 0) {
     lines.push('No images were produced.')
-  } else {
+  } else if (previewBlocks(value).length === 0) {
     lines.push('Call read_image on a path above to look at a generated image.')
   }
-  return [{ type: 'text' as const, text: lines.join('\n') }]
+  // The image blocks that follow are what make the picture appear in the conversation
+  // itself, instead of leaving the reader a path to open.
+  return [{ type: 'text' as const, text: lines.join('\n') }, ...previewBlocks(value)]
 }
 
 const BATCH_SCHEMA = { type: 'object', additionalProperties: true } as const
@@ -309,6 +322,7 @@ export function registerImageTools(ctx: Context, client: GenBoxClient, config: C
         if (args.upscaleRatio !== undefined && args.upscaleRatio !== '') body.upscale_ratio = args.upscaleRatio
       }
       return await runGeneration(
+        ctx,
         client,
         config,
         body,
@@ -496,6 +510,7 @@ export function registerImageTools(ctx: Context, client: GenBoxClient, config: C
 
       try {
         return await runGeneration(
+          ctx,
           client,
           config,
           body,

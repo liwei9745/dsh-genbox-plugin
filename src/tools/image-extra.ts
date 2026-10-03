@@ -2,6 +2,8 @@ import type { Context } from '@deepseek-ai/cordis'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import type { GenBoxClient } from '../client.js'
 import type { Config } from '../config.js'
+import type { JsonObject } from '../json.js'
+import { previewBlocks, previewRefs } from '../preview.js'
 import { resolveTargets, runGeneration } from './image.js'
 import {
   galleryFilename,
@@ -18,6 +20,7 @@ type UpscaleResult = {
   height: number
   originalWidth: number
   originalHeight: number
+  previews?: JsonObject[]
 }
 
 type VariationResult = {
@@ -25,6 +28,7 @@ type VariationResult = {
   providerId: string
   model: string
   strategy?: string
+  previews?: JsonObject[]
 }
 
 type CutoutResult = {
@@ -33,6 +37,7 @@ type CutoutResult = {
   height: number
   adapter: string
   galleryUrl: string
+  previews?: JsonObject[]
 }
 
 const OBJECT_SCHEMA = { type: 'object', additionalProperties: true } as const
@@ -59,7 +64,7 @@ export function registerImageToolbox(ctx: Context, client: GenBoxClient, config:
           type: 'text' as const,
           text: 'genbox_image_upscale -> ' + result.file
             + ' (' + result.originalWidth + 'x' + result.originalHeight + ' => ' + result.width + 'x' + result.height + ')',
-        }]
+        }, ...previewBlocks(result)]
       },
     },
     async execute(args, exec) {
@@ -87,6 +92,7 @@ export function registerImageToolbox(ctx: Context, client: GenBoxClient, config:
         height: response.height ?? 0,
         originalWidth: response.original_width ?? 0,
         originalHeight: response.original_height ?? 0,
+        previews: config.previewInChat === false ? [] : await previewRefs(ctx, [file], config.previewLimit),
       }
     },
   }))
@@ -168,6 +174,7 @@ export function registerImageToolbox(ctx: Context, client: GenBoxClient, config:
       body.quantities = quantities
     }
     const batch = await runGeneration(
+      ctx,
       client,
       config,
       body,
@@ -216,14 +223,18 @@ export function registerImageToolbox(ctx: Context, client: GenBoxClient, config:
         const lines = ['genbox_image_variations — ' + result.files.length + ' image(s) from ' + result.providerId
           + (result.strategy !== undefined ? ' via ' + result.strategy : '')]
         for (const file of result.files) lines.push('- ' + file)
-        return [{ type: 'text' as const, text: lines.join('\n') }]
+        return [{ type: 'text' as const, text: lines.join('\n') }, ...previewBlocks(result)]
       },
     },
     async execute(args, exec) {
       const strategy = args.strategy ?? 'auto'
+      const withPreviews = async (result: VariationResult): Promise<VariationResult> => ({
+        ...result,
+        previews: config.previewInChat === false ? [] : await previewRefs(ctx, result.files, config.previewLimit),
+      })
       if (strategy !== 'prompt') {
         try {
-          return await nativeVariations(args, exec)
+          return await withPreviews(await nativeVariations(args, exec))
         } catch (error) {
           if (strategy === 'native') throw error
           const reason = error instanceof Error ? error.message : String(error)
@@ -280,6 +291,7 @@ export function registerImageToolbox(ctx: Context, client: GenBoxClient, config:
         height: response.height ?? 0,
         adapter: response.adapter ?? '',
         galleryUrl: response.gallery_url ?? '',
+        previews: config.previewInChat === false ? [] : await previewRefs(ctx, [file], config.previewLimit),
       }
     },
   }))
