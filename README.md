@@ -137,6 +137,7 @@ dsh --profile <profile> --dump-config | Select-String genbox   # 确认插件层
 
 | 工具 | 作用 |
 |---|---|
+| `genbox_server` | **启停服务**：在对话里启动 / 停止 / 重启 / 查看本机 GenBox（`action=status\|start\|stop\|restart`）。自动找安装目录，启动后等到真的应答；停止只杀命令行确实是 GenBox `main.py` 的进程 |
 | `genbox_doctor` | **自检**：可达性、认证模式、provider/Key 就绪、输出目录可写、ffmpeg 是否可用，并给出修复建议 |
 | `genbox_open_workbench` | 打印/打开 GenBox 工作台（首装后的第一步） |
 | `genbox_health` | 探测 GenBox 是否在线 |
@@ -154,6 +155,9 @@ dsh --profile <profile> --dump-config | Select-String genbox   # 确认插件层
 
 生成的图片/视频会落到 `outputDir`（默认 `.genbox`）下并把绝对路径返回给模型；模型可以直接用
 DSH 内置的 `read_image` 看图。
+> **端口**：GenBox 本体默认监听 **8891**（`main.py` / `start.ps1`），本插件文档里的 dev 命令用 **8892**。
+> 插件以 `baseUrl`（默认 8892）为主、`baseUrlFallbacks`（默认 8891）为备，**依次探测并记住命中的那个**——
+> 按哪种方式启动都能直接用；服务换端口重启后也会自动重新探测。两个都不通时，报错会列出试过的每个地址。
 
 ## 呈现（UI 卡片）
 

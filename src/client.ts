@@ -8,6 +8,12 @@ export interface GenBoxClientOptions {
   requestTimeoutMs?: number
   /** Base wait before retrying a rate-limited call; doubles per attempt (default 5000 ms). */
   busyRetryDelayMs?: number
+  /**
+   * Extra URLs to try when the configured one does not answer. GenBox's own default port is
+   * 8891 while this plugin's default is 8892, so without this a fresh install fails its very
+   * first call for no better reason than a port mismatch.
+   */
+  fallbackBaseUrls?: string[]
 }
 
 /** A GenBox HTTP failure (non-2xx response or a broken payload). */
@@ -26,16 +32,18 @@ export class GenBoxError extends Error {
  * first-run failure by far is "GenBox is not running", and a bare "fetch failed"
  * tells nobody what to do about it.
  */
-function transportError(baseUrl: string, path: string, error: unknown): GenBoxError {
+function transportError(baseUrl: string, path: string, error: unknown, tried: string[] = []): GenBoxError {
   const cause = (error as { cause?: { code?: unknown } }).cause
   const code = typeof cause?.code === 'string' ? cause.code : (typeof (error as { code?: unknown }).code === 'string' ? String((error as { code?: unknown }).code) : '')
   const raw = error instanceof Error ? error.message : String(error)
   const unreachable = code === 'ECONNREFUSED' || code === 'ENOTFOUND' || code === 'EAI_AGAIN' || code === 'ECONNRESET' || /fetch failed/i.test(raw)
   if (!unreachable) return new GenBoxError('GenBox request ' + path + ' failed: ' + raw)
+  const others = tried.filter((url) => url !== baseUrl)
+  const alsoTried = others.length > 0 ? ' Nothing answered there either (also tried ' + others.join(', ') + ').' : ''
   return new GenBoxError(
-    'GenBox is not answering at ' + baseUrl + ' (' + path + (code === '' ? '' : ', ' + code) + '). '
-    + 'Start the GenBox server, or point the plugin baseUrl at the port it actually listens on. '
-    + 'genbox_open_workbench reports the workbench URL and genbox_doctor checks the whole setup.',
+    'GenBox is not answering at ' + baseUrl + ' (' + path + (code === '' ? '' : ', ' + code) + ').' + alsoTried + ' '
+    + 'Start it with genbox_server (action=status to check, action=start to launch), or point the '
+    + 'plugin baseUrl at the port it actually listens on; genbox_doctor checks the whole setup.',
   )
 }
 
@@ -79,18 +87,74 @@ function isRetryable(error: unknown): boolean {
   return status >= 500 || status === 429 || status === 408
 }
 
+/** How long a single reachability probe may take while locating the server. */
+const LOCATE_TIMEOUT_MS = 2500
+
+/** Trim the trailing slashes a hand-written URL tends to carry. */
+function stripSlashes(url: string): string {
+  return url.trim().replace(/\/+$/, '')
+}
+
 /** Read-only HTTP client for a running GenBox FastAPI server. */
 export class GenBoxClient {
-  readonly baseUrl: string
+  /** The URL configuration asked for; `baseUrl` reports where the server was actually found. */
+  readonly configuredBaseUrl: string
+  /** Every URL worth trying, configured one first, without duplicates. */
+  readonly candidates: string[]
+  private resolvedBaseUrl: string
+  private located = false
   private readonly adminKey: string | undefined
   private readonly requestTimeoutMs: number
   private readonly busyRetryDelayMs: number
 
   constructor(options: GenBoxClientOptions) {
-    this.baseUrl = options.baseUrl.replace(/\/+$/, '')
+    this.configuredBaseUrl = stripSlashes(options.baseUrl)
+    this.resolvedBaseUrl = this.configuredBaseUrl
+    const extra = (options.fallbackBaseUrls ?? []).map(stripSlashes)
+    this.candidates = [this.configuredBaseUrl, ...extra].filter((url, index, all) => url !== '' && all.indexOf(url) === index)
     this.adminKey = options.adminKey && options.adminKey.trim() !== '' ? options.adminKey : undefined
     this.requestTimeoutMs = options.requestTimeoutMs ?? 120000
     this.busyRetryDelayMs = options.busyRetryDelayMs ?? 5000
+  }
+
+  /** Where GenBox actually answers: the configured URL, or the first fallback that does. */
+  get baseUrl(): string {
+    return this.resolvedBaseUrl
+  }
+
+  /** True once something other than the configured URL answered. */
+  get usingFallback(): boolean {
+    return this.resolvedBaseUrl !== this.configuredBaseUrl
+  }
+
+  /** Forget the resolved URL so the next request probes the candidates again. */
+  forgetLocation(): void {
+    this.located = false
+    this.resolvedBaseUrl = this.configuredBaseUrl
+  }
+
+  /**
+   * Probe the configured URL and then each fallback, and remember the first that answers.
+   * Cached until a request fails to connect, which invalidates it so the next call probes
+   * again - a GenBox restarted on another port is picked up without a plugin reload.
+   */
+  async locate(signal?: AbortSignal | undefined): Promise<string> {
+    for (const candidate of this.candidates) {
+      try {
+        const response = await fetch(candidate + '/api/setup/status', { signal: this.signal(signal, LOCATE_TIMEOUT_MS) })
+        if (response.ok) {
+          this.resolvedBaseUrl = candidate
+          this.located = true
+          return candidate
+        }
+      } catch {
+        // Not this one; try the next candidate.
+      }
+    }
+    // Nothing answered. Blame the configured URL and stop probing on every call.
+    this.resolvedBaseUrl = this.configuredBaseUrl
+    this.located = true
+    return this.resolvedBaseUrl
   }
 
   private headers(json: boolean): Headers {
@@ -121,13 +185,24 @@ export class GenBoxClient {
         signal: this.signal(signal, timeoutMs),
       }
       if (body !== undefined) init.body = JSON.stringify(body)
+      if (!this.located) await this.locate(signal)
+      const attempted = this.resolvedBaseUrl
       let response: Response
       try {
-        response = await fetch(this.baseUrl + path, init)
+        response = await fetch(attempted + path, init)
       } catch (error) {
         // A cancellation or a timeout is about this call, not about reachability.
         if (error instanceof Error && (error.name === 'AbortError' || error.name === 'TimeoutError')) throw error
-        throw transportError(this.baseUrl, path, error)
+        // GenBox may have started - or been restarted on another port - since we last looked.
+        this.located = false
+        const relocated = await this.locate(signal)
+        if (relocated === attempted) throw transportError(attempted, path, error, this.candidates)
+        try {
+          response = await fetch(relocated + path, init)
+        } catch (retryError) {
+          if (retryError instanceof Error && (retryError.name === 'AbortError' || retryError.name === 'TimeoutError')) throw retryError
+          throw transportError(relocated, path, retryError, this.candidates)
+        }
       }
       const text = await response.text()
       if (response.ok) return (text ? JSON.parse(text) : null) as T
@@ -223,6 +298,7 @@ export class GenBoxClient {
 
   /** Download a media URL (or an absolute GenBox path) into a local file. */
   async download(urlOrPath: string, targetPath: string, signal?: AbortSignal | undefined): Promise<string> {
+    if (!this.located) await this.locate(signal)
     const url = /^https?:/i.test(urlOrPath)
       ? urlOrPath
       : this.baseUrl + (urlOrPath.startsWith('/') ? urlOrPath : '/' + urlOrPath)
@@ -233,7 +309,7 @@ export class GenBoxClient {
       response = await fetch(url, init)
     } catch (error) {
       if (error instanceof Error && (error.name === 'AbortError' || error.name === 'TimeoutError')) throw error
-      throw transportError(this.baseUrl, url, error)
+      throw transportError(this.baseUrl, url, error, this.candidates)
     }
     if (!response.ok) {
       const detail = describeFailure(await response.text().catch(() => ''), 200)

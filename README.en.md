@@ -126,6 +126,7 @@ dsh --profile <profile> --dump-config | Select-String genbox   # confirm the plu
 
 | Tool | Purpose |
 |---|---|
+| `genbox_server` | **start / stop / restart / inspect** the local GenBox server from the chat (`action=status\|start\|stop\|restart`). Finds the checkout, waits until the server answers, and only ever stops a process whose command line runs GenBox `main.py` |
 | `genbox_doctor` | self-check: reachability, auth mode, provider/key readiness, writable output directory, ffmpeg presence, with fix hints |
 | `genbox_open_workbench` | Print/open the GenBox workbench (the first thing to do after installing) |
 | `genbox_health` | is GenBox reachable |
@@ -143,6 +144,11 @@ dsh --profile <profile> --dump-config | Select-String genbox   # confirm the plu
 
 Generated media lands in `outputDir` and the absolute paths are returned to the model, which can then open them with
 the built-in `read_image` tool.
+
+> **Ports:** GenBox itself listens on **8891** by default (`main.py` / `start.ps1`) while this plugin's documented dev
+> command uses **8892**. The client tries `baseUrl` (8892) first, then `baseUrlFallbacks` (8891), and remembers the one
+> that answered - so either way of starting the server just works, and a restart on a different port is picked up
+> automatically. When neither answers, the error lists every URL it tried.
 
 ## Rendering (UI cards)
 

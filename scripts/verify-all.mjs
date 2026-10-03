@@ -101,6 +101,8 @@ const suites = [
   { name: 'precision annotations', file: 'verify-precision.mjs', needs: ['genbox', 'mock'] },
   { name: 'user journey (generate → edit → video → cut)', file: 'verify-journey.mjs', needs: ['genbox', 'ffmpeg', 'mock'] },
   { name: 'browser: splitter trades space', file: 'browser/measure-splitters.cjs', needs: ['genbox', 'browser'] },
+  // Restarts GenBox, so it runs last and leaves a server on the configured port.
+  { name: 'server control + port fallback', file: 'verify-server.mjs', needs: [] },
   { name: 'real provider (spends a key)', file: 'verify-real-provider.mjs', needs: ['realprovider'] },
 ]
 

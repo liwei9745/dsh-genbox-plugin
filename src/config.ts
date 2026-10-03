@@ -4,6 +4,16 @@ import Schema from '@deepseek-ai/schemastery'
 export interface Config {
   /** Base URL of a running GenBox server. */
   baseUrl: string
+  /**
+   * Comma-separated URLs to try when `baseUrl` does not answer. The default covers GenBox's own
+   * default port, so a fresh install works whether the server was started by start.ps1 (8891) or
+   * the plugin's documented dev command (8892).
+   */
+  baseUrlFallbacks: string
+  /** Path to the GenBox checkout (the directory holding main.py) that genbox_server starts. Empty = auto-detect. */
+  home: string
+  /** How long genbox_server waits for a freshly started server to answer (ms). */
+  serverWaitMs: number
   /** Administrator key required by GenBox in production mode (APP_MODE=prod). */
   adminKey: string
   /** Provider id used when a tool call does not name one explicitly. */
@@ -26,6 +36,9 @@ export interface Config {
 
 export const Config: Schema<Config> = Schema.object({
   baseUrl: Schema.string().default('http://127.0.0.1:8892'),
+  baseUrlFallbacks: Schema.string().default('http://127.0.0.1:8891'),
+  home: Schema.string().default(''),
+  serverWaitMs: Schema.number().default(45000),
   adminKey: Schema.string().default(''),
   defaultProviderId: Schema.string().default(''),
   outputDir: Schema.string().default('.genbox'),

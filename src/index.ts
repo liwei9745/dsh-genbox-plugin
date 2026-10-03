@@ -7,6 +7,7 @@ import { registerImageTools } from './tools/image.js'
 import { registerImageToolbox } from './tools/image-extra.js'
 import { registerMediaTools } from './tools/media.js'
 import { registerProviderTools } from './tools/providers.js'
+import { registerServerTool } from './tools/server.js'
 import { registerTaskTool } from './tools/task.js'
 import { registerVideoEditTool } from './tools/video-edit.js'
 import { registerVideoTools } from './tools/video.js'
@@ -22,10 +23,17 @@ export { Config }
 export { readImageSize, renderAnnotationOverlay, toGenBoxAnnotations } from './annotate.js'
 // Exported so the HTTP behaviour (error wording, tolerant polling) is testable directly.
 export { GenBoxClient, GenBoxError } from './client.js'
+// Exported so server discovery and the stop-safety rule can be tested directly.
+export { discoverHome, looksLikeGenBox } from './server.js'
 
 export function apply(ctx: Context, config: GenBoxConfig) {
   const client = new GenBoxClient({
     baseUrl: config.baseUrl,
+    // GenBox's own default port is 8891 while this plugin's documented default is 8892, so a
+    // fresh install has to survive either. The first URL that answers wins.
+    // Tolerate a partial config: callers that build one by hand (tests, tool-reference.mjs)
+    // do not run the schema defaults.
+    fallbackBaseUrls: (config.baseUrlFallbacks ?? '').split(',').map((url) => url.trim()).filter((url) => url !== ''),
     adminKey: config.adminKey,
     requestTimeoutMs: 120000,
   })
@@ -46,6 +54,7 @@ export function apply(ctx: Context, config: GenBoxConfig) {
   console.log('[genbox] plugin loaded (baseUrl=' + client.baseUrl + ')')
 
   registerProviderTools(ctx, client)
+  registerServerTool(ctx, client, config)
   registerDoctorTool(ctx, client, config)
   registerImageTools(ctx, client, config)
   registerImageToolbox(ctx, client, config)

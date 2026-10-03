@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.4
+
+- **新工具 `genbox_server`**：在对话里直接**启动 / 停止 / 重启 / 查看**本机 GenBox 服务（action=status|start|stop|restart）。
+  启动时自动找安装目录（home 参数 → 插件配置 → GENBOX_HOME → 上次启动记录的路径 → 工作区/家目录常见位置），
+  用 checkout 里的 venv 跑 main.py（dev 模式，无需 admin key），并**等到服务真的应答**才返回。
+  **停止只杀命令行确实是 GenBox main.py 的进程**——端口上若是别的程序，会拒绝并打印它的命令行，而不是误杀（除非显式 force=true）。
+- **端口自动回退（修掉新用户第一次必踩的坑）**：GenBox 本体默认端口是 **8891**（main.py / start.ps1），
+  而插件此前默认连 **8892** —— 按 GenBox 自己的文档启动后，插件第一次调用必然 ECONNREFUSED。
+  现在客户端按 baseUrl → baseUrlFallbacks（默认 8891）依次探测并记住命中的那个；请求中途连不上会**重新探测一次**，
+  服务换端口重启也能自动跟上；全部不通时的报错会**列出试过的每个地址**并指向 genbox_server。
+- 新增套件 `scripts/verify-server.mjs`（13 项断言，自带起停、真实进程验证；结束时把服务留在配置端口上）。
+
 ## 0.1.3
 
 - **README 图文并茂 + 商店截图**：中英 README 顶部加了工作台总览图、三张**真实产物**（文生图 / 局部重绘 / 变体）

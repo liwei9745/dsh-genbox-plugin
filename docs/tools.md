@@ -3,7 +3,7 @@
 > Generated from the registered tool definitions by `node scripts/tool-reference.mjs --write`.
 > `node scripts/tool-reference.mjs` fails when this file and the code disagree, so it cannot drift.
 
-**14 tools.** Every one of them talks to a local GenBox server over HTTP.
+**15 tools.** Every one of them talks to a local GenBox server over HTTP.
 
 | Tool | What it is for | Parameters |
 |---|---|---|
@@ -18,6 +18,7 @@
 | [`genbox_open_workbench`](#genbox_open_workbench) | Open the local GenBox workbench (its own web UI) and report whether the server answers | 2 |
 | [`genbox_prompt_optimize`](#genbox_prompt_optimize) | Rewrite a rough image prompt into a richer one with GenBox's configured prompt-assistant LLM | 2 |
 | [`genbox_providers`](#genbox_providers) | List the providers a local GenBox server has configured (image, video, or LLM), with enabled state, models, declared capabilities and transport (endpointType) | 2 |
+| [`genbox_server`](#genbox_server) | Start, stop, restart or inspect the local GenBox server that every other genbox_* tool talks to | 5 |
 | [`genbox_task`](#genbox_task) | Check or cancel a GenBox job | 4 |
 | [`genbox_video_edit`](#genbox_video_edit) | Edit a local video with ffmpeg - no GenBox server or API key needed | 15 |
 | [`genbox_video_generate`](#genbox_video_generate) | Generate a video through a local GenBox server: text-to-video (mode=ti2vid), image-to-video (mode=i2vid with one reference image) or first/last keyframes (mode=keyframes with exactly two images) | 14 |
@@ -182,6 +183,22 @@ List the providers a local GenBox server has configured (image, video, or LLM), 
 |---|---|---|---|
 | `type` | one of: `image` | `video` | `llm` | `all` | no | Which provider type to list; defaults to 'all'. |
 | `enabledOnly` | boolean | no | Only return providers that are currently enabled (default false). |
+
+## genbox_server
+
+```
+Start, stop, restart or inspect the local GenBox server that every other genbox_* tool talks to. Use action=status to see whether it is running and on which port and PID; action=start to launch it from the GenBox checkout on this machine (dev mode, so no admin key is needed); action=stop to shut that server down; action=restart to do both. Stopping only ever kills a process whose command line runs GenBox main.py, so an unrelated program on the same port is reported instead of terminated.
+```
+
+| Parameter | Type | Required | Meaning |
+|---|---|---|---|
+| `action` | one of: `status` | `start` | `stop` | `restart` | yes | What to do. |
+| `port` | number | no | Port to start/stop on. Defaults to the port the plugin is connected to (usually 8892). |
+| `home` | string | no | Path to a GenBox checkout (the directory holding main.py). Defaults to the configured home, GENBOX_HOME, or the usual places near the workspace. |
+| `wait` | boolean | no | For start/restart: wait until the server answers before returning (default true). |
+| `force` | boolean | no | For stop: kill the process holding the port even when its command line does not look like GenBox. Off by default. |
+
+Declares a UI render intent (`presentCall` / `presentResult`).
 
 ## genbox_task
 
