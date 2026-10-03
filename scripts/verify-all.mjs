@@ -62,12 +62,22 @@ function browserUp() {
   })
 }
 
-/** Is a zero-cost mock provider enabled? Generation suites must not spend a real key. */
+/**
+ * Is a zero-cost mock provider enabled AND answering? Generation suites must not spend a real
+ * key, and an enabled-but-dead endpoint used to look like eleven passing prerequisites while
+ * seven suites failed - the fake image server is a separate process.
+ */
 async function mockUp() {
   try {
     const response = await fetch(GENBOX + '/api/providers', { signal: AbortSignal.timeout(2500) })
     const body = await response.json()
-    return (body?.providers ?? []).some((provider) => provider.enabled === true && String(provider.id).startsWith('mock'))
+    const mock = (body?.providers ?? []).find((provider) => provider.enabled === true && String(provider.id).startsWith('mock'))
+    if (mock === undefined) return false
+    const endpoint = String(mock.base_url ?? mock.baseUrl ?? '').replace(/\/+$/, '')
+    if (endpoint === '') return true
+    // Any HTTP answer proves the endpoint is up; a 404 from its root is still an answer.
+    const probe = await fetch(endpoint + '/v1/models', { signal: AbortSignal.timeout(2500) }).catch(() => null)
+    return probe !== null
   } catch { return false }
 }
 
