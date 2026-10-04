@@ -34,7 +34,9 @@ if (published) {
   const dist = npm(['view', NAME, 'dist.tarball'])
   checks.push({ label: 'dist.tarball advertised', ok: dist.ok && dist.out.startsWith('http'), detail: dist.out })
 
-  const pack = npm(['pack', NAME + '@' + version.out, '--dry-run', '--json'])
+  // --prefer-online: a just-published version can still be missing from the local
+  // packument cache, which surfaces as a bogus ETARGET instead of the real files.
+  const pack = npm(['pack', NAME + '@' + version.out, '--dry-run', '--json', '--prefer-online'])
   let files = []
   if (pack.ok) {
     const start = pack.out.indexOf('[')
