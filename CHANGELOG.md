@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.2.0
+
+- **GenBox 原版界面直接嵌进 DSH NEXT（不用再跳浏览器）**：插件新增**客户端半边**（`dsh.client` + `client/client.js`），
+  在右侧边栏注册一个 **GenBox 标签页**，里面就是 GenBox 自己的 Web UI（系统看板 / 生图 / 生视频 / 媒体库 / 历史 / 扩展功能 / 设置）。
+  打开方式：**Ctrl+Shift+G**，或右侧边栏"新标签页"里的 **GenBox** 卡片；
+  面板自带地址栏（默认 `http://127.0.0.1:8892/`，可改并记住）、刷新、在系统浏览器中打开。
+- **为什么必须走 Electron 而非 iframe**：GenBox 的 HTML 带 `X-Frame-Options: DENY` 与
+  `Content-Security-Policy: frame-ancestors 'none'`，iframe 一定被拒。桌面端因此使用 DSH 官方的
+  **webview 租约**（`dshDesktop.browser.acquire(workspace)` → `src="about:blank#<lease>"` + `partition` → `loadURL`），
+  与 DSH 内置浏览器走同一套主进程审批与隔离策略；浏览器（web）环境下没有该通道，面板会明确提示改用系统浏览器。
+- 新增套件 `scripts/verify-client-panel.mjs`（**25 项断言**，假 DOM + 假 React + 假 Electron 桥）：
+  验证 bundle 只注册一个 factory、`apply/inject` 契约、标签类型/body/title/快捷键绑定、
+  以及**租约协议全过程**（acquire → `about:blank#<lease>` → partition → dom-ready → `loadURL`）。零网络、零花费。
+- `genbox_open_workbench` 现在会提示"在 DSH 里用 Ctrl+Shift+G 内嵌打开"。
+
 ## 0.1.5
 
 - **生成的图直接出现在对话里**：生图 / 改图 / 超分 / 变体产出的图片会被提交为 DSH 附件，

@@ -152,7 +152,7 @@ Ask a GenBox image provider for visual variations of an existing image. GenBox's
 ## genbox_open_workbench
 
 ```
-Open the local GenBox workbench (its own web UI) and report whether the server answers. Call this once right after the plugin is installed, and whenever the user asks where to configure providers, API keys or settings, or where to browse generated media: the tools below only drive GenBox over HTTP, while the workbench is the human-facing UI.
+Open the local GenBox workbench (its own web UI) and report whether the server answers. Call this once right after the plugin is installed, and whenever the user asks where to configure providers, API keys or settings, or where to browse generated media: the tools below only drive GenBox over HTTP, while the workbench is the human-facing UI. On the DSH desktop app the same UI also runs inside the right sidebar (Ctrl+Shift+G, or the GenBox tab).
 ```
 
 | Parameter | Type | Required | Meaning |

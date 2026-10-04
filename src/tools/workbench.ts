@@ -30,7 +30,8 @@ export function registerWorkbenchTool(ctx: Context, client: GenBoxClient, config
     description:
       'Open the local GenBox workbench (its own web UI) and report whether the server answers. Call this once right after '
       + 'the plugin is installed, and whenever the user asks where to configure providers, API keys or settings, or where to '
-      + 'browse generated media: the tools below only drive GenBox over HTTP, while the workbench is the human-facing UI.',
+      + 'browse generated media: the tools below only drive GenBox over HTTP, while the workbench is the human-facing UI. '
+      + 'On the DSH desktop app the same UI also runs inside the right sidebar (Ctrl+Shift+G, or the GenBox tab).',
     parameters: {
       page: { type: 'string', description: "Optional section to open: 'gallery', 'settings', 'providers' or 'tasks'." },
       open: { type: 'boolean', description: 'Launch the browser (default false - it only reports the URL).' },
@@ -43,6 +44,7 @@ export function registerWorkbenchTool(ctx: Context, client: GenBoxClient, config
           'genbox_open_workbench — ' + (result.running ? 'GenBox is running' : 'GenBox did not answer') + ': ' + result.url,
         ]
         lines.push(result.opened ? '- opened in your default browser' : '- pass open=true to launch it')
+        lines.push('- inside DSH NEXT: Ctrl+Shift+G (or the sidebar GenBox tab) embeds this URL in the app - no browser needed')
         lines.push('- ' + result.hint)
         return [{ type: 'text' as const, text: lines.join('\n') }]
       },

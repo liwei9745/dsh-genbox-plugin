@@ -122,6 +122,20 @@ dsh --profile <profile> --dump-config | Select-String genbox   # confirm the plu
 > takes effect after a restart. Use a separate profile such as `dsh --profile genbox-dev --from-default-profile web`
 > while developing.
 
+## GenBox inside DSH NEXT (no browser detour)
+
+Since **0.2.0** the plugin ships a **native sidebar panel**: GenBox's own web UI runs inside the DSH NEXT
+right sidebar.
+
+- Open it with **Ctrl+Shift+G**, or the **GenBox** card under the sidebar's "new tab" list;
+- the panel carries its own address bar (default `http://127.0.0.1:8892/`, editable and remembered),
+  a refresh button and "open in system browser";
+- why not an iframe: GenBox serves `X-Frame-Options: DENY` and `frame-ancestors 'none'`, so a frame is
+  always refused. On the desktop app the panel therefore uses DSH's official **webview lease**
+  (`dshDesktop.browser.acquire(workspace)` → `about:blank#<lease>` + `partition` → `loadURL`), the same
+  main-process approval and isolation policy the built-in browser uses; in a plain browser there is no such
+  channel and the panel says so and points at the system browser.
+
 ## Tools
 
 | Tool | Purpose |

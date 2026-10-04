@@ -133,6 +133,17 @@ dsh --profile <profile> --dump-config | Select-String genbox   # 确认插件层
 > 装进 `desktop` profile 后需要重启 DSH NEXT 才生效。建议先用独立 profile
 > （`dsh --profile genbox-dev --from-default-profile web`）验证。
 
+## 在 DSH NEXT 里直接用 GenBox（不跳浏览器）
+
+从 **0.2.0** 起，插件带一个**原生侧边栏面板**：GenBox 自己的 Web UI 直接嵌在 DSH NEXT 右侧边栏里。
+
+- 打开：**Ctrl+Shift+G**，或右侧边栏「新标签页」里的 **GenBox** 卡片；
+- 面板自带地址栏（默认 `http://127.0.0.1:8892/`，可改成 8891 或别的端口，会记住）、**刷新**、**在系统浏览器中打开**；
+- 为什么不是 iframe：GenBox 的 HTML 发 `X-Frame-Options: DENY` 和 `frame-ancestors 'none'`，
+  浏览器一定拒绝。桌面端因此走 DSH 官方的 **webview 租约**
+  （`dshDesktop.browser.acquire(workspace)` → `about:blank#<lease>` + `partition` → `loadURL`），
+  与内置浏览器同一套主进程审批 / 隔离策略；纯浏览器环境下没有该通道，面板会明确提示改用系统浏览器。
+
 ## 工具
 
 | 工具 | 作用 |

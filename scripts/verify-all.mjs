@@ -102,6 +102,7 @@ const suites = [
   { name: 'doctor self-check', file: 'verify-doctor.mjs', needs: ['genbox'] },
   { name: 'image + video tools', file: 'verify-tools.mjs', needs: ['genbox', 'mock'] },
   { name: 'inline image previews', file: 'verify-preview.mjs', needs: ['genbox', 'mock'] },
+  { name: 'client panel (in-app GenBox tab)', file: 'verify-client-panel.mjs', needs: [] },
   { name: 'edit modes (inpaint + precision)', file: 'verify-edit-modes.mjs', needs: ['genbox', 'mock'] },
   { name: 'cutout failure surfacing', file: 'verify-cutout.mjs', needs: ['genbox'] },
   { name: 'background jobs', file: 'verify-background.mjs', needs: ['genbox', 'mock'] },

@@ -1,6 +1,6 @@
 {
   "name": "dsh-genbox-plugin",
-  "version": "0.1.5",
+  "version": "0.2.0",
   "type": "module",
   "packageManager": "pnpm@12.8.1",
   "description": "DeepSeek Harness tools for GenBox: image generation/editing (including inpaint, upscale, cutout) and video generation through a local GenBox server.",
@@ -30,10 +30,13 @@
   "exports": {
     ".": {
       "default": "./lib/index.js"
-    }
+    },
+    "./client": "./client/client.js",
+    "./package.json": "./package.json"
   },
   "files": [
     "lib",
+    "client",
     "cordis.patch.yml",
     "README.md",
     "README.en.md",
@@ -42,6 +45,14 @@
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-sidebar-right",
+        "@deepseek-ai/dsh-client-ui-session",
+        "@deepseek-ai/dsh-client-shortcuts"
+      ]
     }
   },
   "publishConfig": {
