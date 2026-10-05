@@ -72,8 +72,12 @@ const requireStub = (specifier) => {
 }
 const moduleExports = registration.factory(requireStub)
 ok('the factory exports apply()', typeof moduleExports?.apply === 'function')
-ok('the factory exports inject()', typeof moduleExports?.inject === 'function')
-ok('inject() names the sidebar services', Array.isArray(moduleExports.inject()) && moduleExports.inject().includes('sidebarRightTabs'), JSON.stringify(moduleExports.inject?.()))
+// Regression: cordis reads `inject` as a STATIC array. Exporting a function made
+// every ctx.<service> read throw "cannot get property ... without inject", which
+// is what bricked the desktop app's web boot in 0.2.0.
+const declaredInject = moduleExports?.inject
+ok('inject is a static service array', Array.isArray(declaredInject), typeof declaredInject)
+ok('inject declares every service apply() touches', Array.isArray(declaredInject) && ['slots', 'sidebarRight', 'sidebarRightTabs'].every((name) => declaredInject.includes(name)), JSON.stringify(declaredInject))
 
 // --- apply() against a recording context --------------------------------------
 const effects = []
@@ -82,7 +86,7 @@ const right = {
   commandTarget: (element) => element,
   openTabFromTarget: (kind, target) => { recorded.opened = { kind, target } },
 }
-const ctx = {
+const baseCtx = {
   effect: (fn) => { effects.push(fn) },
   slots: {
     inject: (_name, fn) => fn(),
@@ -96,7 +100,17 @@ const ctx = {
     sidebarRight: right,
   }),
 }
-moduleExports.apply(ctx)
+// Cordis throws on any ctx.<service> read the inject declaration does not list.
+// Enforce the same rule here so an undeclared access fails the suite, not boot.
+const strictCtx = new Proxy(baseCtx, {
+  get(target, key) {
+    if (typeof key === 'string' && !(key in target) && !declaredInject.includes(key)) {
+      throw new Error('cannot get property "' + key + '" without inject')
+    }
+    return Reflect.get(target, key)
+  },
+})
+moduleExports.apply(strictCtx)
 for (const effect of effects) effect()
 
 ok('one tab type is registered', recorded.tabs.length === 1)

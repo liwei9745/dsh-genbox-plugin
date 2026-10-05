@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.2.1
+
+- **修复一个会让 DSH NEXT 起不来的严重 bug（0.2.0 引入）**：客户端半边把 `inject` 导出成了**函数**，
+  而 cordis 只认**静态数组**形式的 `inject` 声明。结果是"没有声明任何依赖"，
+  `apply()` 里第一次读 `ctx.sidebarRightTabs` 就抛
+  `cannot get property "sidebarRightTabs" without inject`；
+  这次失败被记成 `web boot: 1 entry did not activate / dsh-genbox-plugin: failed`，
+  DSH NEXT 的插件自愈机制随后**把整个 bundle 停用**（`.dsh/recovery/` 里有快照）。
+  现在 `inject` 是数组 `["slots", "sidebarRight", "sidebarRightTabs"]`，与内置插件同形。
+- **测试补上这条回归**：`verify-client-panel.mjs` 现在断言 `inject` 必须是**数组**且**覆盖 apply() 触碰的每个服务**，
+  并用一个 **cordis 同款严格 ctx**（读未声明服务即抛错）来跑 `apply()`——
+  也就是说，0.2.0 那个错误现在会在**测试里**失败，而不是在你启动应用时爆炸。
+- 复现与验证方法（无需重启你的桌面端）：`dsh --profile genbox-dev --no-open --port 9126`
+  然后用 Chromium 打开该地址抓 console —— 0.2.0 会打出上面那条 inject 报错，0.2.1 干净无错。
+
 ## 0.2.0
 
 - **GenBox 原版界面直接嵌进 DSH NEXT（不用再跳浏览器）**：插件新增**客户端半边**（`dsh.client` + `client/client.js`），

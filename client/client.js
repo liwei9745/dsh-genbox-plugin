@@ -312,10 +312,14 @@ window.__ModuleLoader__.load({
 			})
 		}
 
-		/** Services this plugin's apply() touches. */
-		function inject() {
-			return ["slots", "sidebarRight", "sidebarRightTabs"]
-		}
+		/**
+		 * Required client services, declared the way cordis reads them: a static
+		 * array exported as `inject`. Cordis refuses ANY `ctx.<service>` access the
+		 * declaration does not list, so exporting a function here silently declares
+		 * nothing and `apply()` dies with "cannot get property ... without inject".
+		 * Keep this list in sync with every `ctx.<service>` access below.
+		 */
+		const inject = ["slots", "sidebarRight", "sidebarRightTabs"]
 
 		const exports = { apply, inject }
 		Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" })
