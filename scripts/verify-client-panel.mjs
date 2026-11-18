@@ -174,6 +174,75 @@ listeners.get('dom-ready')?.()
 await new Promise((resolve) => setTimeout(resolve, 0))
 ok('dom-ready navigates to the GenBox UI', guest.loaded === 'http://127.0.0.1:8892/', String(guest.loaded))
 
+// --- the DSH shortcut-registry contract ---------------------------------------
+// The shell validates every declared default against every other command for
+// all six runtime×platform pairs, and throws from inside register(). That throw
+// does not just lose the shortcut: it fails this plugin's apply(), and every
+// plugin waiting on its services stays pending ("web boot: N entries did not
+// activate"). 0.2.1 shipped `web:*` defaults equal to core's `session.rename`
+// (primary+alt+G) and bricked the Web boot on every platform. Mirror the check
+// here against the core defaults so the next collision fails this suite.
+const MODIFIER_ORDER = ['control', 'alt', 'shift', 'meta']
+const CORE_SHORTCUT_DEFAULTS = [
+  ['session.new', { 'desktop:macos': ['KeyN', ['primary']], 'desktop:windows': ['KeyN', ['primary']], 'desktop:linux': ['KeyN', ['primary']], 'web:macos': ['KeyN', ['primary', 'alt']], 'web:windows': ['KeyN', ['primary', 'alt']] }],
+  ['session.search', { 'desktop:macos': ['KeyK', ['primary']], 'desktop:windows': ['KeyK', ['primary']], 'desktop:linux': ['KeyK', ['primary']], 'web:macos': ['KeyK', ['primary', 'alt']], 'web:windows': ['KeyK', ['primary', 'alt']] }],
+  ['workspace.add', { 'desktop:macos': ['KeyO', ['primary']], 'desktop:windows': ['KeyO', ['primary']], 'desktop:linux': ['KeyO', ['primary']], 'web:macos': ['KeyO', ['primary', 'alt']], 'web:windows': ['KeyO', ['primary', 'alt']] }],
+  ['session.rename', { 'desktop:macos': ['KeyG', ['primary', 'alt']], 'desktop:windows': ['KeyG', ['primary', 'alt']], 'desktop:linux': ['KeyG', ['primary', 'alt']], 'web:macos': ['KeyG', ['primary', 'alt']], 'web:windows': ['KeyG', ['primary', 'alt']] }],
+  ['session.fork', { 'desktop:macos': ['KeyF', ['primary', 'alt']], 'desktop:windows': ['KeyF', ['primary', 'alt']], 'desktop:linux': ['KeyF', ['primary', 'alt']], 'web:macos': ['KeyF', ['primary', 'shift']], 'web:windows': ['KeyF', ['primary', 'shift']] }],
+  ['session.archive', { 'desktop:macos': ['KeyA', ['primary', 'shift']], 'desktop:windows': ['KeyA', ['primary', 'shift']], 'desktop:linux': ['KeyA', ['primary', 'shift']], 'web:macos': ['KeyA', ['primary', 'alt']], 'web:windows': ['KeyA', ['primary', 'alt']] }],
+  ['sidebar.left.toggle', { 'desktop:macos': ['KeyB', ['primary']], 'desktop:windows': ['KeyB', ['primary']], 'desktop:linux': ['KeyB', ['primary']], 'web:macos': ['KeyB', ['primary', 'alt']], 'web:windows': ['KeyB', ['primary', 'alt']] }],
+  ['sidebar.right.toggle', { 'desktop:macos': ['KeyB', ['primary', 'alt']], 'desktop:windows': ['KeyB', ['primary', 'alt']], 'desktop:linux': ['KeyB', ['primary', 'alt']], 'web:macos': ['KeyB', ['primary', 'shift']], 'web:windows': ['KeyB', ['primary', 'shift']] }],
+  ['workspace.files', { 'desktop:macos': ['KeyP', ['primary']], 'desktop:windows': ['KeyP', ['primary']], 'desktop:linux': ['KeyP', ['primary']], 'web:macos': ['KeyP', ['primary', 'alt']], 'web:windows': ['KeyP', ['primary', 'alt']] }],
+  ['workspace.openLocal', { 'desktop:macos': ['KeyO', ['primary', 'alt']], 'desktop:windows': ['KeyO', ['primary', 'alt']], 'desktop:linux': ['KeyO', ['primary', 'alt']], 'web:macos': ['KeyO', ['primary', 'shift']], 'web:windows': ['KeyO', ['primary', 'shift']] }],
+  ['browser.new', { 'desktop:macos': ['KeyT', ['primary']], 'desktop:windows': ['KeyT', ['primary']], 'desktop:linux': ['KeyT', ['primary']], 'web:macos': ['KeyT', ['primary', 'alt']], 'web:windows': ['KeyT', ['primary', 'alt']] }],
+  ['settings.open', { 'desktop:macos': ['Comma', ['primary']], 'desktop:windows': ['Comma', ['primary']], 'desktop:linux': ['Comma', ['primary']], 'web:macos': ['Comma', ['primary', 'alt']], 'web:windows': ['Comma', ['primary', 'alt']] }],
+  ['shortcuts.open', { 'desktop:macos': ['Slash', ['primary']], 'desktop:windows': ['Slash', ['primary']], 'desktop:linux': ['Slash', ['primary']], 'web:macos': ['Slash', ['primary']], 'web:windows': ['Slash', ['primary']], 'web:linux': ['Slash', ['primary']] }],
+  ['terminal.new', { 'desktop:macos': ['Backquote', ['control']], 'desktop:windows': ['Backquote', ['control']], 'desktop:linux': ['Backquote', ['control']], 'web:macos': ['Backquote', ['control']], 'web:windows': ['Backquote', ['control']] }],
+  ['pane.split', { 'desktop:macos': ['Backslash', ['primary']], 'desktop:windows': ['Backslash', ['primary']], 'desktop:linux': ['Backslash', ['primary']], 'web:macos': ['Backslash', ['primary']], 'web:windows': ['Backslash', ['primary']], 'web:linux': ['Backslash', ['primary']] }],
+  ['pane.fullscreen.toggle', { 'desktop:macos': ['Enter', ['primary', 'alt']], 'desktop:windows': ['Enter', ['primary', 'alt']], 'desktop:linux': ['Enter', ['primary', 'alt']], 'web:macos': ['Enter', ['primary', 'alt']], 'web:windows': ['Enter', ['primary', 'alt']] }],
+  ['page.close', { 'desktop:macos': ['KeyW', ['primary']], 'desktop:windows': ['KeyW', ['primary']], 'desktop:linux': ['KeyW', ['primary']], 'web:macos': ['KeyW', ['primary', 'alt']], 'web:windows': ['KeyW', ['primary', 'alt']] }],
+  ['page.refresh', { 'desktop:macos': ['KeyR', ['primary']], 'desktop:windows': ['KeyR', ['primary']], 'desktop:linux': ['KeyR', ['primary']], 'web:macos': ['KeyR', ['primary', 'alt']], 'web:windows': ['KeyR', ['primary', 'alt']] }],
+]
+
+/** dsh-client-shortcuts: resolve `primary` per platform, then order modifiers. */
+function normalizeBinding(binding, platform) {
+  const [code, modifiers] = Array.isArray(binding) ? binding : [binding.code, binding.modifiers]
+  const resolved = new Set(modifiers.map((value) => value === 'primary' ? (platform === 'macos' ? 'meta' : 'control') : value))
+  return { code, modifiers: MODIFIER_ORDER.filter((value) => resolved.has(value)) }
+}
+
+/** dsh-client-shortcuts: exact modifier set + same physical key. */
+const overlaps = (left, right) => left.modifiers.join('+') === right.modifiers.join('+') && left.code === right.code
+
+/** dsh-client-shortcuts: the Web key space is a small, shell-owned whitelist. */
+function webBindingAllowed(binding, platform) {
+  const modifiers = binding.modifiers
+  if (modifiers.length >= 3) return true
+  const primary = platform === 'macos' ? 'meta' : 'control'
+  if (modifiers.length === 1 && modifiers[0] === primary && ['Comma', 'Backslash', 'Slash'].includes(binding.code)) return true
+  if (modifiers.length === 1 && modifiers[0] === 'control' && binding.code === 'Backquote') return true
+  return modifiers.length === 2 && modifiers.includes(primary) && (modifiers.includes('alt') || modifiers.includes('shift'))
+}
+
+const shortcut = recorded.shortcuts[0] ?? {}
+const shortcutProblems = []
+for (const runtime of ['desktop', 'web']) {
+  for (const platform of ['macos', 'windows', 'linux']) {
+    const raw = shortcut.defaults?.[runtime + ':' + platform]
+    if (raw === undefined) continue
+    const binding = normalizeBinding(raw, platform)
+    if (runtime === 'web' && !webBindingAllowed(binding, platform)) shortcutProblems.push(runtime + ':' + platform + ' is outside the Web key space')
+    for (const [coreId, coreDefaults] of CORE_SHORTCUT_DEFAULTS) {
+      const other = coreDefaults[runtime + ':' + platform]
+      if (other !== undefined && overlaps(binding, normalizeBinding(other, platform))) shortcutProblems.push(runtime + ':' + platform + ' collides with core ' + coreId)
+    }
+  }
+}
+ok('genbox.open defaults survive the DSH shortcut registry', shortcutProblems.length === 0, shortcutProblems.join('; '))
+ok('the desktop shortcut stays Ctrl/Cmd+Shift+G (the documented way in)',
+  shortcut.defaults?.['desktop:macos']?.code === 'KeyG' && shortcut.defaults?.['desktop:macos']?.modifiers?.join('+') === 'primary+shift',
+  JSON.stringify(shortcut.defaults?.['desktop:macos']))
+
 const failed = checks.filter((check) => !check.passed)
 console.log('')
 if (failed.length > 0) {
