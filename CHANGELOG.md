@@ -1,5 +1,20 @@
 # Changelog
 
+## 未发布
+
+- **修复一个会让 DSH Web 起不来的严重 bug（0.1.0 起一直存在）**：`genbox.open` 在 `web:macos` /
+  `web:windows` 上的默认键是 `primary+alt+G`，和 DSH 核心 `session.rename` 的默认键**完全重叠**。
+  DSH 的快捷键注册表会对 `desktop/web × macos/windows/linux` **六种组合逐一**校验默认键，
+  一旦重叠就在 `register()` 里抛 `Conflicting shortcut defaults`——这个异常发生在
+  `apply()` 里，于是本插件激活失败，并连带所有等待其服务的插件一起卡在 pending：
+  页面只剩 `Failed to load plugins` / `web boot: 19 entries did not activate`。
+  因为校验遍历所有平台，**Linux 用户也会中招**，哪怕 Linux 上根本没有 `web:linux` 默认键。
+  现在**不再声明任何 `web:*` 默认键**：桌面端保持文档里的 `Ctrl/Cmd+Shift+G`，
+  Web 端请在「设置 → 快捷键」里自行绑定（Web 的键位空间由 shell 掌控，核心已占用 `primary+alt+字母` 一族）。
+- **测试补上这条回归**：`verify-client-panel.mjs` 现在内置一份核心默认键清单，
+  按 dsh-client-shortcuts 的 `normalizeBinding` / `overlappingBindings` / `isWebBindingAllowed`
+  规则逐平台复算——旧代码会在这里直接 FAIL，而不是等用户启动应用时爆炸。
+
 ## 0.2.1
 
 - **修复一个会让 DSH NEXT 起不来的严重 bug（0.2.0 引入）**：客户端半边把 `inject` 导出成了**函数**，

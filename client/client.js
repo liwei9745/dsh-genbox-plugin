@@ -291,8 +291,12 @@ window.__ModuleLoader__.load({
 								"desktop:macos": { code: "KeyG", modifiers: ["primary", "shift"] },
 								"desktop:windows": { code: "KeyG", modifiers: ["primary", "shift"] },
 								"desktop:linux": { code: "KeyG", modifiers: ["primary", "shift"] },
-								"web:macos": { code: "KeyG", modifiers: ["primary", "alt"] },
-								"web:windows": { code: "KeyG", modifiers: ["primary", "alt"] },
+								// No `web:*` default on purpose. The shell owns the Web key space
+								// and core already binds `session.rename` to primary+alt+G; the
+								// shortcut registry throws on ANY overlapping default — including
+								// on platforms this machine never runs — and that throw fails
+								// apply(), which cascades into "web boot: N entries did not
+								// activate". Web users can bind a key in Settings → 快捷键.
 							},
 							regions: ["page", "editable", "terminal"],
 							modals: [],
